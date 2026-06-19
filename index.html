@@ -236,6 +236,8 @@ function buildSeed() {
     moods: { a: { date: "", emoji: "" }, b: { date: "", emoji: "" } },
     activityDates: [],
     features: { countdowns: true, mood: true, keepsakes: true, dreams: true, watchlist: true, reminders: true },
+    ntfyOn: false,
+    ntfyTopic: "",
     countdowns: [],
     letters: [],
     reminders: [],
@@ -261,6 +263,8 @@ function normalize(d) {
   out.theme = THEMES[d.theme] ? d.theme : "sunset";
   out.longDistance = !!d.longDistance;
   out.features = { ...s.features, ...(d.features || {}) };
+  out.ntfyOn = !!d.ntfyOn;
+  out.ntfyTopic = d.ntfyTopic || "";
   if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
   else out.countdowns = d.countdowns;
   return out;
@@ -399,6 +403,8 @@ function EventForm({ presetDate, onSave, onClose }) {
   const [cat, setCat] = useState("fun");
   const [date, setDate] = useState(presetDate);
   const [time, setTime] = useState("");
+  const [notifyMin, setNotifyMin] = useState(0);
+  const NOTIFY_OPTS = [[0, "בזמן עצמו"], [10, "10 דק׳ לפני"], [30, "30 דק׳ לפני"], [60, "שעה לפני"], [1440, "יום לפני"]];
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-4">
@@ -407,13 +413,24 @@ function EventForm({ presetDate, onSave, onClose }) {
       </div>
       <Label>מה קורה?</Label>
       <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="לדוגמה: ארוחת ערב בחוץ" className={inputCls + " mb-4"} style={inputStyle} />
-      <div className="flex gap-2 mb-2">
+      <div className="flex gap-2 mb-3">
         <div className="flex-1"><Label>תאריך</Label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} style={inputStyle} /></div>
         <div className="flex-1"><Label>שעה (לא חובה)</Label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} style={inputStyle} /></div>
       </div>
+      {time && (
+        <div className="mb-3">
+          <Label>מתי לקבל התראה?</Label>
+          <div className="flex flex-wrap gap-2">
+            {NOTIFY_OPTS.map(([m, lbl]) => (
+              <button key={m} onClick={() => setNotifyMin(m)} className="rounded-2xl px-3 py-2 font-bold transition active:scale-95"
+                style={notifyMin === m ? { fontSize: 12.5, background: "#7C3AED", color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.ink }}>{lbl}</button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
         <span style={{ fontSize: 14 }}>🔔</span>
-        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>אם תבחר שעה, האפליקציה תתן לך התראה כשהזמן מגיע (בזמן שהאפליקציה פתוחה או ברקע).</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>אם תבחר שעה ו"התראות לטלפון" מופעלות בהגדרות — תקבלו התראה לטלפון במועד שבחרתם, גם כשהיומן סגור.</span>
       </div>
       <Label>סוג</Label>
       <div className="grid grid-cols-2 gap-2 mb-5">
@@ -424,7 +441,7 @@ function EventForm({ presetDate, onSave, onClose }) {
           </button>
         ))}
       </div>
-      <button disabled={!title.trim()} onClick={() => onSave({ id: uid(), date, title: title.trim(), cat, time: time || "", at: time ? new Date(date + "T" + time).toISOString() : null })}
+      <button disabled={!title.trim()} onClick={() => onSave({ id: uid(), date, title: title.trim(), cat, time: time || "", at: time ? new Date(date + "T" + time).toISOString() : null, notifyMin: time ? notifyMin : 0 })}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#7C3AED,#3B6BFF)" }}>הוספה ללוח</button>
     </div>
   );
@@ -469,29 +486,26 @@ function CountdownForm({ current, names, defaultBy, onSave, onDelete, onClose })
   );
 }
 
-function buildICSHref(text, atISO) {
+function sendNtfy(topic, message) {
+  if (!topic) return;
   try {
-    const start = new Date(atISO);
-    if (isNaN(start.getTime())) return "";
-    const z = (n) => String(n).padStart(2, "0");
-    const fmt = (d) => d.getUTCFullYear() + z(d.getUTCMonth() + 1) + z(d.getUTCDate()) + "T" + z(d.getUTCHours()) + z(d.getUTCMinutes()) + z(d.getUTCSeconds()) + "Z";
-    const end = new Date(start.getTime() + 15 * 60000);
-    const esc = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/[,;]/g, (m) => "\\" + m).replace(/\r?\n/g, "\\n");
-    const ics = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Couple Journal//HE", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      "UID:" + Date.now() + "-" + Math.random().toString(36).slice(2) + "@couple-journal",
-      "DTSTAMP:" + fmt(new Date()),
-      "DTSTART:" + fmt(start),
-      "DTEND:" + fmt(end),
-      "SUMMARY:" + esc(text),
-      "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + esc(text),
-      "TRIGGER;VALUE=DATE-TIME:" + fmt(start),
-      "END:VALARM",
-      "END:VEVENT", "END:VCALENDAR",
-    ].join("\r\n");
-    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
-  } catch (e) { console.error("ics build failed", e); return ""; }
+    fetch("https://ntfy.sh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, title: "היומן שלנו ❤️", message: message || "", tags: ["love_letter"] }),
+    }).catch(function () {});
+  } catch (e) {}
+}
+
+function scheduleNtfy(topic, fireAtMs, message) {
+  if (!topic) return;
+  try {
+    fetch("https://ntfy.sh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, title: "היומן שלנו ❤️", message: message || "", tags: ["bell"], delay: String(Math.round(fireAtMs / 1000)) }),
+    }).catch(function () {});
+  } catch (e) {}
 }
 
 function ReminderForm({ onSave, onClose }) {
@@ -510,7 +524,7 @@ function ReminderForm({ onSave, onClose }) {
       <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-3"} style={inputStyle} />
       <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
         <span style={{ fontSize: 14 }}>🔔</span>
-        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>האפליקציה תתן לך התראה כשהזמן מגיע (בזמן שהיא פתוחה או ברקע). לאחר השמירה אפשר גם ללחוץ 📅 ליד התזכורת כדי להוסיף אותה ליומן הטלפון.</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>אם "התראות לטלפון" מופעלות בהגדרות — תקבלו התראה לטלפון בזמן שקבעתם, גם כשהיומן סגור.</span>
       </div>
       <button disabled={!text.trim()} onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת</button>
@@ -518,7 +532,7 @@ function ReminderForm({ onSave, onClose }) {
   );
 }
 
-function SettingsForm({ names, anniversary, theme, longDistance, people, features, email, onResetPassword, onSave, onClose }) {
+function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, onTestNtfy, email, onResetPassword, onSave, onClose }) {
   const [a, setA] = useState(names.a);
   const [b, setB] = useState(names.b);
   const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
@@ -527,9 +541,14 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
   const [cityA, setCityA] = useState((people && people.a && people.a.city) || "");
   const [cityB, setCityB] = useState((people && people.b && people.b.city) || "");
   const [feat, setFeat] = useState({ ...(features || {}) });
+  const [ntOn, setNtOn] = useState(!!ntfyOn);
+  const [ntTopic, setNtTopic] = useState(ntfyTopic || "");
+  const [copied, setCopied] = useState(false);
   const [pwMsg, setPwMsg] = useState("");
   const toggleFeat = (k) => setFeat((f) => ({ ...f, [k]: !f[k] }));
   const FEATS = [["countdowns", "ספירה לאחור ⏳"], ["mood", "מצב רוח 😊"], ["keepsakes", "מזכרות ⭐"], ["dreams", "רשימת חלומות ☁️"], ["watchlist", "רשימת צפייה 🎬"], ["reminders", "תזכורות 🔔"]];
+  const toggleNtfy = () => setNtOn((v) => { const nv = !v; if (nv && !ntTopic) setNtTopic("yomanzugi-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)); return nv; });
+  const copyTopic = () => { try { navigator.clipboard.writeText(ntTopic); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {} };
   async function resetPw() { setPwMsg("שולח…"); const ok = await onResetPassword(); setPwMsg(ok ? "נשלח מייל לאיפוס הסיסמה — בדקו את תיבת הדואר" : "שגיאה בשליחה, נסו שוב"); }
   return (
     <div className="p-5">
@@ -578,7 +597,28 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
         ))}
       </div>
 
-      <button onClick={() => onSave({ names: { a: a.trim(), b: b.trim() }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } }, features: feat })}
+      <Label>התראות לטלפון 📲</Label>
+      <button onClick={toggleNtfy} className="w-full flex items-center justify-between rounded-2xl px-4 py-2.5 mb-2" style={{ background: C.soft }}>
+        <span className="font-bold" style={{ fontSize: 13.5, color: C.ink }}>שלח התראה לטלפון בכל מכתב חדש</span>
+        <span className="rounded-full transition" style={{ width: 44, height: 26, background: ntOn ? "#22C55E" : "#D6C2CC", position: "relative" }}>
+          <span className="rounded-full" style={{ position: "absolute", top: 3, right: ntOn ? 3 : 21, width: 20, height: 20, background: "#fff", transition: "right .2s" }} />
+        </span>
+      </button>
+      {ntOn && (
+        <div className="mb-5 rounded-2xl p-3" style={{ background: "#F3F7FF", border: "1px solid #D9E6FF" }}>
+          <div style={{ fontSize: 12, color: "#3B5B8C", lineHeight: 1.6 }}>
+            כדי לקבל את ההתראות גם כשהיומן סגור: שניכם מתקינים את האפליקציה <b>ntfy</b> (חינם, מ-App Store), ועוקבים אחרי הערוץ הסודי הבא (Subscribe → הדביקו את השם):
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <input readOnly value={ntTopic} className={inputCls} style={{ ...inputStyle, direction: "ltr", textAlign: "left", fontSize: 13 }} />
+            <button onClick={copyTopic} className="shrink-0 rounded-2xl px-3 py-2 font-bold" style={{ fontSize: 12.5, background: "#3B82F6", color: "#fff" }}>{copied ? "הועתק ✓" : "העתק"}</button>
+          </div>
+          <button onClick={() => onTestNtfy && onTestNtfy(ntTopic)} className="w-full mt-2 rounded-2xl py-2.5 font-bold" style={{ fontSize: 13, background: "#fff", color: "#3B82F6", border: "1px solid #BFD4FF" }}>שליחת התראת בדיקה 🔔</button>
+          <div style={{ fontSize: 11, color: "#7E8AA0", marginTop: 6, lineHeight: 1.5 }}>שמרו את ההגדרות אחרי ההפעלה. שימו לב: הערוץ פרטי כל עוד השם נשאר סודי.</div>
+        </div>
+      )}
+
+      <button onClick={() => onSave({ names: { a: a.trim(), b: b.trim() }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } }, features: feat, ntfyOn: ntOn, ntfyTopic: ntTopic })}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירה</button>
 
       <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${C.line}` }}>
@@ -850,7 +890,7 @@ function App() {
   const saveTimerRef = useRef(null);
   const seenLettersRef = useRef(null);
   const localLettersRef = useRef(new Set());
-  const notifiedEventsRef = useRef(new Set());
+
 
   const [now, setNow] = useState(Date.now());
   const [me, setMe] = useState("b");
@@ -858,7 +898,6 @@ function App() {
   const [cdTarget, setCdTarget] = useState(null);
   const [openLetter, setOpenLetter] = useState(null);
   const [moodPickerFor, setMoodPickerFor] = useState(null);
-  const [alertMsg, setAlertMsg] = useState(null);
   const [open, setOpen] = useState({ dreams: false, keepsakes: false, reminders: false, watchlist: false });
   const [dreamTxt, setDreamTxt] = useState("");
   const [watchTxt, setWatchTxt] = useState("");
@@ -921,62 +960,47 @@ function App() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [data, fb, user]);
 
-  // fire due reminders (best effort, while app is open)
+  // mark reminders as done once their time passes (no in-app pop-up)
   useEffect(() => {
     if (!data || !data.reminders || !data.reminders.length) return;
     const nowMs = Date.now();
     const due = data.reminders.filter((r) => !r.fired && new Date(r.at).getTime() <= nowMs);
     if (!due.length) return;
     setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
-    due.forEach((r) => {
-      if (nowMs - new Date(r.at).getTime() < 120000) {
-        const msg = "תזכורת: " + r.text;
-        setAlertMsg(msg);
-        setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 6000);
-        try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("תזכורת ❤️", { body: r.text }); } catch {}
-      }
-    });
   }, [now]);
 
-  // fire notifications for timed calendar events (while app is open / in background)
+  // schedule phone pushes (ntfy) for upcoming timed events & reminders — fires even when app is closed
   useEffect(() => {
-    if (!data || !data.events || !data.events.length) return;
+    if (!data || !data.ntfyOn || !data.ntfyTopic) return;
     const nowMs = Date.now();
-    data.events.forEach((e) => {
-      if (!e.at || notifiedEventsRef.current.has(e.id)) return;
-      const t = new Date(e.at).getTime();
-      if (isNaN(t)) return;
-      if (t <= nowMs && nowMs - t < 120000) {
-        notifiedEventsRef.current.add(e.id);
-        const msg = "🗓️ " + e.title;
-        setAlertMsg(msg);
-        setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 6000);
-        try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("יומן ❤️", { body: e.title }); } catch {}
+    const maxMs = nowMs + 3 * 864e5; // ntfy.sh allows scheduling up to 3 days ahead
+    const toSend = [];
+    let changed = false;
+    const events = data.events.map((e) => {
+      if (!e.at) return e;
+      const fireAt = new Date(e.at).getTime() - (e.notifyMin || 0) * 60000;
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && e.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🗓️ " + e.title + (e.time ? " · " + e.time : "") });
+        changed = true;
+        return { ...e, ntfySched: fireAt };
       }
+      return e;
     });
-  }, [now]);
-  useEffect(() => {
-    if (!data) return;
-    const ids = data.letters.map((l) => l.id);
-    if (seenLettersRef.current === null) {
-      // first load: remember existing letters, don't notify, ask for permission once
-      seenLettersRef.current = new Set(ids);
-      try { if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {}
-      return;
+    const reminders = data.reminders.map((r) => {
+      if (r.fired || !r.at) return r;
+      const fireAt = new Date(r.at).getTime();
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && r.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🔔 " + r.text });
+        changed = true;
+        return { ...r, ntfySched: fireAt };
+      }
+      return r;
+    });
+    if (changed) {
+      toSend.forEach((s) => scheduleNtfy(data.ntfyTopic, s.fireAt, s.msg));
+      setData((d) => ({ ...d, events, reminders }));
     }
-    const fresh = data.letters.filter((l) => !seenLettersRef.current.has(l.id));
-    fresh.forEach((l) => {
-      seenLettersRef.current.add(l.id);
-      if (localLettersRef.current.has(l.id)) return; // our own letter — don't notify ourselves
-      const name = data.names[l.from] || "";
-      const msg = "💌 מכתב חדש מ" + name;
-      setAlertMsg(msg);
-      setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 7000);
-      try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification(msg, { body: l.text ? l.text.slice(0, 90) : "" }); } catch {}
-    });
   }, [data]);
-
-  /* derived (guarded for null data so hooks always run) */
   const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake || l.createdAt + l.durationHours * 3600000 > now).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
   const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake).sort((a, b) => b.createdAt - a.createdAt), [data]);
   const sortedCds = useMemo(() => !data ? [] : [...data.countdowns].sort((a, b) => new Date(a.date) - new Date(b.date)), [data]);
@@ -1063,11 +1087,11 @@ function App() {
   const act = (d) => (d.activityDates && d.activityDates.includes(todayISO) ? d.activityDates : [...(d.activityDates || []), todayISO]);
 
   /* mutations */
-  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); };
+  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, "💌 מכתב חדש מ" + N[l.from]); };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
   const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true } : l) }));
   const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
-  const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); try { if (e.at && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {} };
+  const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
   const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
   const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
   const delCountdown = (id) => { setData((d) => ({ ...d, countdowns: d.countdowns.filter((x) => x.id !== id) })); setModal(null); setCdTarget(null); };
@@ -1079,7 +1103,7 @@ function App() {
   const addWatch = () => { if (!watchTxt.trim()) return; setData((d) => ({ ...d, watchlist: [{ id: uid(), text: watchTxt.trim(), done: false }, ...(d.watchlist || [])] })); setWatchTxt(""); };
   const toggleWatch = (id) => setData((d) => ({ ...d, watchlist: d.watchlist.map((x) => x.id === id ? { ...x, done: !x.done } : x) }));
   const delWatch = (id) => setData((d) => ({ ...d, watchlist: d.watchlist.filter((x) => x.id !== id) }));
-  const addReminder = (r) => { setData((d) => ({ ...d, reminders: [...d.reminders, r] })); setModal(null); try { if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {} };
+  const addReminder = (r) => { setData((d) => ({ ...d, reminders: [...d.reminders, r] })); setModal(null); };
   const delReminder = (id) => setData((d) => ({ ...d, reminders: d.reminders.filter((x) => x.id !== id) }));
   const openCd = (target) => { setCdTarget(target); setModal("countdown"); };
 
@@ -1103,16 +1127,6 @@ function App() {
         <div style={{ position: "absolute", top: 260, left: -90, width: 300, height: 300, borderRadius: 999, background: T.blobs[1], filter: "blur(80px)", opacity: 0.5 }} />
         <div style={{ position: "absolute", bottom: -110, right: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
       </div>
-
-      {alertMsg && (
-        <div className="slide-down" style={{ position: "fixed", top: 14, left: 0, right: 0, zIndex: 60, display: "flex", justifyContent: "center", padding: "0 12px" }}>
-          <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: "#fff", boxShadow: "0 16px 40px -16px rgba(150,40,80,.5)", border: `1px solid ${C.line}`, maxWidth: 400 }}>
-            <Bell style={{ width: 18, height: 18, color: "#EC4899" }} />
-            <span className="font-bold" style={{ fontSize: 14, color: C.ink }}>{alertMsg}</span>
-            <button onClick={() => setAlertMsg(null)} className="shrink-0"><X style={{ width: 16, height: 16, color: C.muted }} /></button>
-          </div>
-        </div>
-      )}
 
       <div className="mx-auto w-full px-4 pb-12 pt-5 space-y-4" style={{ maxWidth: 430, position: "relative", zIndex: 1 }}>
 
@@ -1324,7 +1338,9 @@ function App() {
                       <div className="font-bold flex items-center justify-end gap-1.5" style={{ fontSize: 15, color: C.ink }}>{e.title}{e.time ? <span style={{ fontSize: 12 }}>🔔</span> : null}</div>
                       <div style={{ fontSize: 12, color: C.muted }}>{e.time ? `${e.time} · ` : ""}{CATS[e.cat].label}</div>
                     </div>
-                    <button onClick={() => delEvent(e.id)} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => delEvent(e.id)}><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1345,7 +1361,6 @@ function App() {
                 <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 14, color: C.ink, textDecoration: r.fired ? "line-through" : "none" }}>{r.text}</div>
                   <div style={{ fontSize: 11, color: C.muted }}>{new Date(r.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{r.fired ? " · בוצע" : ""}</div></div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {!r.fired && <a href={buildICSHref(r.text, r.at)} title="הוסף ליומן הטלפון" style={{ fontSize: 17, textDecoration: "none" }}>📅</a>}
                   <button onClick={() => delReminder(r.id)}><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
                 </div>
               </div>
@@ -1372,7 +1387,7 @@ function App() {
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
       {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={N} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
       {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
-      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
     </div>
   );
 }
