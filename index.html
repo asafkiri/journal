@@ -95,20 +95,6 @@ const SCRIPT = "'Gveret Levin', 'Rubik', system-ui, cursive";
 const BODY = "Rubik, system-ui, sans-serif";
 const MOOD_EMOJIS = ["😍","🥰","😊","😌","😎","😴","🥲","😤","🥳","💪"];
 const REACTIONS = ["❤️","😍","🥹","😂","🥰","🔥","👏"];
-const LOVE_QUOTES = [
-  "כל יום איתך הוא המתנה הכי יפה 🎁",
-  "אתה/את הבית שלי 🏡❤️",
-  "אם הייתי צריך/ה לבחור שוב — הייתי בוחר/ת בך, בכל פעם מחדש 💍",
-  "החיוך שלך הוא הדבר האהוב עליי בעולם 😊",
-  "ביחד זה המקום האהוב עליי להיות בו 🤍",
-  "כל סיפור אהבה יפה, אבל שלנו הוא האהוב עליי 📖",
-  "אתה/את לא חצי שלי — אתה/את כל מה שלא ידעתי שחיפשתי ✨",
-  "אפילו הימים הרגילים הופכים למיוחדים כשאתה/את לידי 🌸",
-  "אוהב/ת אותך אתמול, היום, ותמיד 💞",
-  "הלב שלי בחר בך, והוא צודק כל יום מחדש 💘",
-  "איתך גם הדממה נעימה 🌙",
-  "אתה/את ההוכחה שחלומות מתגשמים 🌟",
-];
 const DATE_IDEAS = [
   "פיקניק בפארק עם אוכל שאתם אוהבים 🧺",
   "ערב משחקי קופסה וקפה ☕🎲",
@@ -263,10 +249,9 @@ function buildSeed() {
     anniversary: null,
     moods: { a: { date: "", emoji: "" }, b: { date: "", emoji: "" } },
     activityDates: [],
-    features: { countdowns: true, mood: true, keepsakes: true, dreams: true, watchlist: true, reminders: true, quote: true, dateIdea: true, roulette: true },
+    features: { countdowns: true, mood: true, keepsakes: true, dreams: true, watchlist: true, reminders: true, dateIdea: true, roulette: true },
     ntfyOn: false,
     ntfyTopic: "",
-    thinkingText: "",
     dateIdeas: DATE_IDEAS.slice(),
     roulette: ["מי בוחר סרט 🎬", "מי מכין ארוחה 🍳", "נשיקה 💋", "חיבוק גדול 🤗", "מי שוטף כלים 🧽", "10 דק׳ עיסוי 💆"],
     countdowns: [],
@@ -296,7 +281,6 @@ function normalize(d) {
   out.features = { ...s.features, ...(d.features || {}) };
   out.ntfyOn = !!d.ntfyOn;
   out.ntfyTopic = d.ntfyTopic || "";
-  out.thinkingText = d.thinkingText || "";
   out.dateIdeas = Array.isArray(d.dateIdeas) && d.dateIdeas.length ? d.dateIdeas : DATE_IDEAS.slice();
   out.roulette = Array.isArray(d.roulette) ? d.roulette : s.roulette;
   if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
@@ -568,7 +552,7 @@ function ReminderForm({ onSave, onClose }) {
   );
 }
 
-function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, thinkingText, dateIdeas, onTestNtfy, email, onResetPassword, onSave, onClose }) {
+function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, dateIdeas, onTestNtfy, email, onResetPassword, onSave, onClose }) {
   const [a, setA] = useState(names.a);
   const [b, setB] = useState(names.b);
   const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
@@ -580,14 +564,13 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
   const [ntOn, setNtOn] = useState(!!ntfyOn);
   const [ntTopic, setNtTopic] = useState(ntfyTopic || "");
   const [copied, setCopied] = useState(false);
-  const [think, setThink] = useState(thinkingText || "");
   const [ideas, setIdeas] = useState(Array.isArray(dateIdeas) ? [...dateIdeas] : []);
   const [ideaTxt, setIdeaTxt] = useState("");
   const addIdea = () => { if (ideaTxt.trim()) { setIdeas((a) => [...a, ideaTxt.trim()]); setIdeaTxt(""); } };
   const delIdea = (i) => setIdeas((a) => a.filter((_, idx) => idx !== i));
   const [pwMsg, setPwMsg] = useState("");
   const toggleFeat = (k) => setFeat((f) => ({ ...f, [k]: !f[k] }));
-  const FEATS = [["countdowns", "ספירה לאחור ⏳"], ["mood", "מצב רוח 😊"], ["keepsakes", "מזכרות ⭐"], ["dreams", "רשימת חלומות ☁️"], ["watchlist", "רשימת צפייה 🎬"], ["reminders", "תזכורות 🔔"], ["quote", "ציטוט אהבה יומי 💕"], ["dateIdea", "רעיון לדייט 💡"], ["roulette", "רולטה 🎡"]];
+  const FEATS = [["countdowns", "ספירה לאחור ⏳"], ["mood", "מצב רוח 😊"], ["keepsakes", "מזכרות ⭐"], ["dreams", "רשימת חלומות ☁️"], ["watchlist", "רשימת צפייה 🎬"], ["reminders", "תזכורות 🔔"], ["dateIdea", "רעיון לדייט 💡"], ["roulette", "רולטה 🎡"]];
   const toggleNtfy = () => setNtOn((v) => { const nv = !v; if (nv && !ntTopic) setNtTopic("yomanzugi-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)); return nv; });
   const copyTopic = () => { try { navigator.clipboard.writeText(ntTopic); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {} };
   async function resetPw() { setPwMsg("שולח…"); const ok = await onResetPassword(); setPwMsg(ok ? "נשלח מייל לאיפוס הסיסמה — בדקו את תיבת הדואר" : "שגיאה בשליחה, נסו שוב"); }
@@ -659,9 +642,6 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
         </div>
       )}
 
-      <Label>מלל לכפתור "חושב/ת עלייך" 💭</Label>
-      <input value={think} onChange={(e) => setThink(e.target.value)} placeholder="חושב/ת עלייך 🥰" className={inputCls + " mb-5"} style={inputStyle} />
-
       <Label>בנק רעיונות לדייט 💡</Label>
       <div className="flex gap-2 mb-2">
         <input value={ideaTxt} onChange={(e) => setIdeaTxt(e.target.value)} placeholder="רעיון חדש לדייט…" className={inputCls} style={inputStyle} onKeyDown={(e) => { if (e.key === "Enter") addIdea(); }} />
@@ -677,7 +657,7 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
         {ideas.length === 0 && <div className="text-center py-2" style={{ fontSize: 12.5, color: C.muted }}>אין רעיונות — הוסיפו כמה ✨</div>}
       </div>
 
-      <button onClick={() => onSave({ names: { a: a.trim(), b: b.trim() }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } }, features: feat, ntfyOn: ntOn, ntfyTopic: ntTopic, thinkingText: think.trim(), dateIdeas: ideas })}
+      <button onClick={() => onSave({ names: { a: a.trim(), b: b.trim() }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } }, features: feat, ntfyOn: ntOn, ntfyTopic: ntTopic, dateIdeas: ideas })}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירה</button>
 
       <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${C.line}` }}>
@@ -983,11 +963,17 @@ function RouletteCard({ options, onAdd, onDelete }) {
           <div style={{ position: "relative", width: 230, height: 230, marginBottom: 14 }}>
             <div style={{ position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "11px solid transparent", borderRight: "11px solid transparent", borderTop: "20px solid #2B2533", zIndex: 3, filter: "drop-shadow(0 2px 2px rgba(0,0,0,.2))" }} />
             <div style={{ width: 230, height: 230, borderRadius: "50%", background: grad, border: "6px solid #fff", boxShadow: "0 10px 30px -8px rgba(150,40,80,.45)", transform: `rotate(${rot}deg)`, transition: spinning ? "transform 4s cubic-bezier(.17,.67,.3,1)" : "none", position: "relative" }}>
-              {options.map((o, i) => (
-                <div key={i} style={{ position: "absolute", top: "50%", left: "50%", transformOrigin: "0 0", transform: `rotate(${(i + 0.5) * seg}deg) translate(8px, -8px)`, width: 105, textAlign: "left", pointerEvents: "none" }}>
-                  <span style={{ display: "inline-block", color: "#fff", fontSize: 11, fontWeight: 800, textShadow: "0 1px 2px rgba(0,0,0,.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 95 }}>{o}</span>
-                </div>
-              ))}
+              {options.map((o, i) => {
+                const mid = (i + 0.5) * seg;
+                const r = (mid * Math.PI) / 180;
+                const x = 115 + 68 * Math.sin(r);
+                const y = 115 - 68 * Math.cos(r);
+                return (
+                  <div key={i} style={{ position: "absolute", left: x, top: y, width: 82, transform: `translate(-50%,-50%) rotate(${-rot}deg)`, transition: spinning ? "transform 4s cubic-bezier(.17,.67,.3,1)" : "none", textAlign: "center", pointerEvents: "none" }}>
+                    <span style={{ display: "inline-block", color: "#fff", fontSize: 10, fontWeight: 800, lineHeight: 1.12, textShadow: "0 1px 2px rgba(0,0,0,.5)", wordBreak: "break-word", maxHeight: 36, overflow: "hidden" }}>{o}</span>
+                  </div>
+                );
+              })}
             </div>
             <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "#fff", boxShadow: "0 2px 6px rgba(0,0,0,.2)", zIndex: 2, display: "grid", placeItems: "center", fontSize: 16 }}>❤️</div>
           </div>
@@ -1031,6 +1017,8 @@ function App() {
   const [watchTxt, setWatchTxt] = useState("");
   const [dateIdeaIdx, setDateIdeaIdx] = useState(() => Math.floor(Math.random() * DATE_IDEAS.length));
   const [thinkSent, setThinkSent] = useState(false);
+  const [msgTxt, setMsgTxt] = useState("");
+  const [msgSent, setMsgSent] = useState(false);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
   const td = new Date();
@@ -1212,9 +1200,9 @@ function App() {
   const N = { a: data.names.a || "אני", b: data.names.b || "את/ה" };
   const coupleTitle = (data.names.a || data.names.b) ? `${data.names.a} ו${data.names.b}` : "היומן שלנו";
   const F = data.features || {};
-  const todayQuote = LOVE_QUOTES[Math.floor(Date.now() / 864e5) % LOVE_QUOTES.length];
   const ideaBank = (data.dateIdeas && data.dateIdeas.length) ? data.dateIdeas : DATE_IDEAS;
-  const sendThinking = () => { if (!data.ntfyOn || !data.ntfyTopic) return; sendNtfy(data.ntfyTopic, "💭 " + N[me] + " " + (data.thinkingText.trim() || "חושב/ת עלייך עכשיו 🥰")); setThinkSent(true); setTimeout(() => setThinkSent(false), 2500); };
+  const sendThinking = () => { if (!data.ntfyOn || !data.ntfyTopic) return; sendNtfy(data.ntfyTopic, "💭 " + N[me] + " חושב/ת עלייך עכשיו 🥰"); setThinkSent(true); setTimeout(() => setThinkSent(false), 2500); };
+  const sendMsg = () => { if (!data.ntfyOn || !data.ntfyTopic || !msgTxt.trim()) return; sendNtfy(data.ntfyTopic, "💬 " + N[me] + ": " + msgTxt.trim()); setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500); };
   const addRoulette = (t) => setData((d) => ({ ...d, roulette: [...(d.roulette || []), t] }));
   const delRoulette = (i) => setData((d) => ({ ...d, roulette: (d.roulette || []).filter((_, idx) => idx !== i) }));
   const pendingWatch = data.watchlist.filter((w) => !w.done).length;
@@ -1312,13 +1300,17 @@ function App() {
         {data.ntfyOn && data.ntfyTopic && (
           <button onClick={sendThinking} className="fade-up w-full rounded-3xl py-3.5 flex items-center justify-center gap-2 font-extrabold transition active:scale-95"
             style={{ animationDelay: ".06s", fontSize: 15, color: "#fff", background: "linear-gradient(95deg,#F472B6,#A855F7)", boxShadow: "0 14px 28px -14px #A855F7" }}>
-            {thinkSent ? "נשלח! 💌" : "💭 " + (data.thinkingText.trim() || "חושב/ת עלייך")}
+            {thinkSent ? "נשלח! 💌" : "💭 חושב/ת עלייך — שלח/י נשיקה"}
           </button>
         )}
 
-        {F.quote && (
-          <Card className="fade-up p-4 text-center" style={{ animationDelay: ".08s", background: "linear-gradient(135deg,#FFF5F9,#F6F0FF)" }}>
-            <div style={{ fontFamily: SCRIPT, fontSize: 19, color: "#9D4EDD", lineHeight: 1.4 }}>{todayQuote}</div>
+        {data.ntfyOn && data.ntfyTopic && (
+          <Card className="fade-up p-3" style={{ animationDelay: ".08s" }}>
+            <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>💬</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>שלח/י הודעה עכשיו</span></div>
+            <div className="flex gap-2">
+              <input value={msgTxt} onChange={(e) => setMsgTxt(e.target.value)} placeholder="כתבו משהו ושלחו…" className={inputCls} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }} />
+              <button onClick={sendMsg} disabled={!msgTxt.trim()} className="shrink-0 rounded-2xl px-5 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>{msgSent ? "✓" : "שלח"}</button>
+            </div>
           </Card>
         )}
 
@@ -1546,7 +1538,7 @@ function App() {
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
       {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={N} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
       {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
-      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} thinkingText={data.thinkingText} dateIdeas={data.dateIdeas} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} dateIdeas={data.dateIdeas} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
     </div>
   );
 }
