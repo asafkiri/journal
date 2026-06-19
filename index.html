@@ -4,10 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>היומן של אסף וליאל ❤️</title>
+<meta name="theme-color" content="#EE4F6E" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="היומן שלנו" />
+<meta name="format-detection" content="telephone=no" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gveret+Levin&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
@@ -23,9 +30,8 @@
 <!-- Firebase (loads as a module, then exposes helpers on window.__fb) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-  import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAan_Ogz5E2K-6nJtlLvpFiLXiUYSDXxyM",
@@ -40,10 +46,9 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const storage = getStorage(app);
   try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
 
-  window.__fb = { auth, db, storage, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, doc, getDoc, setDoc, onSnapshot, sRef, uploadBytes, getDownloadURL, deleteObject };
+  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, onSnapshot };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
@@ -170,8 +175,8 @@ function approxBytes(durl) { const i = durl.indexOf(","); return Math.ceil((durl
    Prefers WebP (much smaller), falls back to JPEG. Shrinks quality first, then
    dimensions, until the result fits the byte budget (default ~50KB). */
 function fileToDataURL(file, opts = {}) {
-  const maxDim = opts.maxDim || 1280;
-  const budget = opts.budgetBytes || 260 * 1024;
+  const maxDim = opts.maxDim || 1000;
+  const budget = opts.budgetBytes || 90 * 1024;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
@@ -371,30 +376,18 @@ function AddRow({ value, onChange, onAdd, placeholder, grad }) {
 }
 
 /* ============================ forms ============================ */
-function WriteLetterForm({ from, names, onUploadPhoto, onSave, onClose }) {
+function WriteLetterForm({ from, names, onSave, onClose }) {
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState(null);
   const [dur, setDur] = useState(24);
   const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
   const fileRef = useRef(null);
   const accent = from === "b" ? "#EC4899" : "#3B82F6";
   async function pick(e) { const f = e.target.files && e.target.files[0]; if (!f) return; setBusy(true); setErr(""); try { setPhoto(await fileToDataURL(f)); } catch { setErr("לא הצלחנו לטעון את התמונה"); } finally { setBusy(false); } }
-  async function submit() {
-    if (!text.trim() || uploading) return;
-    const id = uid();
-    let photoUrl = null, photoPath = null;
-    if (photo) {
-      setErr(""); setUploading(true);
-      try {
-        const blob = await (await fetch(photo)).blob();
-        const res = await onUploadPhoto(blob, id);
-        photoUrl = res.url; photoPath = res.path;
-      } catch (e) { console.error(e); setUploading(false); setErr("שגיאה בהעלאת התמונה — נסו שוב"); return; }
-      setUploading(false);
-    }
-    onSave({ id, from, text: text.trim(), photo: photoUrl, photoPath, createdAt: Date.now(), durationHours: dur === 0 ? 1e6 : dur, keepsake: dur === 0, reaction: null });
+  function submit() {
+    if (!text.trim()) return;
+    onSave({ id: uid(), from, text: text.trim(), photo, createdAt: Date.now(), durationHours: dur === 0 ? 1e6 : dur, keepsake: dur === 0, reaction: null });
   }
   return (
     <div className="p-5">
@@ -428,8 +421,8 @@ function WriteLetterForm({ from, names, onUploadPhoto, onSave, onClose }) {
         ))}
       </div>
       {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
-      <button disabled={!text.trim() || uploading} onClick={submit}
-        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>{uploading ? "שולח את התמונה…" : "שליחת המכתב 💗"}</button>
+      <button disabled={!text.trim()} onClick={submit}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>שליחת המכתב 💗</button>
     </div>
   );
 }
@@ -522,7 +515,7 @@ function ReminderForm({ onSave, onClose }) {
   );
 }
 
-function SettingsForm({ names, anniversary, theme, longDistance, people, onSave, onClose }) {
+function SettingsForm({ names, anniversary, theme, longDistance, people, email, onResetPassword, onSave, onClose }) {
   const [a, setA] = useState(names.a);
   const [b, setB] = useState(names.b);
   const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
@@ -530,6 +523,8 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, onSave,
   const [ld, setLd] = useState(longDistance);
   const [cityA, setCityA] = useState((people && people.a && people.a.city) || "");
   const [cityB, setCityB] = useState((people && people.b && people.b.city) || "");
+  const [pwMsg, setPwMsg] = useState("");
+  async function resetPw() { setPwMsg("שולח…"); const ok = await onResetPassword(); setPwMsg(ok ? "נשלח מייל לאיפוס הסיסמה — בדקו את תיבת הדואר" : "שגיאה בשליחה, נסו שוב"); }
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-4">
@@ -566,6 +561,13 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, onSave,
       )}
       <button onClick={() => onSave({ names: { a: a.trim() || "אני", b: b.trim() || "את/ה" }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } } })}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירה</button>
+
+      <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${C.line}` }}>
+        <Label>החשבון</Label>
+        {email && <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8, direction: "ltr", textAlign: "right" }}>{email}</div>}
+        <button onClick={resetPw} className="w-full rounded-2xl py-3 font-bold transition active:scale-95" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>שינוי סיסמה (שליחת מייל איפוס)</button>
+        {pwMsg && <div className="text-center mt-2" style={{ fontSize: 12.5, color: "#16A34A" }}>{pwMsg}</div>}
+      </div>
     </div>
   );
 }
@@ -603,6 +605,28 @@ function MoodCard({ names, moodA, moodB, open, onOpen, onPick }) {
 function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClose }) {
   const accent = letter.from === "b" ? "#EC4899" : "#3B82F6";
   const remaining = letter.createdAt + letter.durationHours * 3600000 - now;
+  const cardRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const dateStr = new Date(letter.createdAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" });
+  async function saveImage() {
+    if (saving || !window.html2canvas || !cardRef.current) return;
+    setSaving(true);
+    try {
+      const canvas = await window.html2canvas(cardRef.current, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+      if (!blob) throw new Error("no blob");
+      const fname = "מכתב-" + dateStr.replace(/[/\s]/g, "-") + ".png";
+      const file = new File([blob], fname, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "מכתב 💌" }); setSaving(false); return; }
+        catch (e) { if (e && e.name === "AbortError") { setSaving(false); return; } }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) { console.error("save image failed", e); }
+    finally { setSaving(false); }
+  }
   return (
     <Modal onClose={onClose} accent={accent}>
       <div className="p-5">
@@ -619,6 +643,9 @@ function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClo
           {REACTIONS.map((e) => (<button key={e} onClick={() => onReact(e)} className="rounded-full transition active:scale-90"
             style={{ fontSize: 20, width: 38, height: 38, background: letter.reaction === e ? `${accent}22` : C.soft, border: letter.reaction === e ? `1.5px solid ${accent}` : "1.5px solid transparent" }}>{e}</button>))}
         </div>
+        <button onClick={saveImage} disabled={saving} className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50 mb-3" style={{ fontSize: 14.5, background: `${accent}14`, color: accent, border: `1.5px solid ${accent}33` }}>
+          <ImageIcon style={{ width: 18, height: 18 }} />{saving ? "מכין תמונה…" : "שמירת המכתב כתמונה לגלריה"}
+        </button>
         <div className="flex items-center justify-between gap-2">
           <RoundBtn onClick={onDelete} className="w-11 h-11" style={{ background: "#FDECEC" }}><Trash2 style={{ width: 20, height: 20, color: "#EF4444" }} /></RoundBtn>
           <button onClick={onKeepsake} disabled={letter.keepsake} className="flex items-center gap-2 rounded-2xl px-4 py-3 font-bold transition active:scale-95"
@@ -628,6 +655,18 @@ function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClo
           <div className="flex items-center gap-1.5 rounded-2xl px-3 py-2.5" style={{ background: "#F6EEF2" }}>
             <Clock style={{ width: 16, height: 16, color: C.muted }} /><span className="font-bold tabular-nums" style={{ fontSize: 12.5, color: letter.keepsake ? "#16A34A" : C.ink }}>{letter.keepsake ? "לתמיד" : `נותרו: ${fmtHMS(remaining)}`}</span>
           </div>
+        </div>
+      </div>
+
+      {/* hidden card rendered to an image when saving */}
+      <div ref={cardRef} dir="rtl" aria-hidden="true" style={{ position: "fixed", left: -99999, top: 0, width: 380, fontFamily: BODY, padding: 22, background: "linear-gradient(160deg,#FFE3D3 0%,#FBD7E4 100%)" }}>
+        <div style={{ background: "#fff", borderRadius: 26, padding: 26, borderTop: `6px solid ${accent}`, boxShadow: "0 18px 40px -20px rgba(150,40,80,.5)" }}>
+          <div style={{ textAlign: "center", fontFamily: SCRIPT, fontSize: 30, color: accent, lineHeight: 1.1 }}>מאת {names[letter.from]} 💌</div>
+          <div style={{ textAlign: "center", fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 18 }}>{dateStr}</div>
+          {letter.photo && <img src={letter.photo} alt="" style={{ width: "100%", borderRadius: 18, marginBottom: 18, display: "block" }} />}
+          <div style={{ whiteSpace: "pre-wrap", fontSize: 18, color: C.ink, lineHeight: 1.8, textAlign: "center" }}>{letter.text}</div>
+          {letter.reaction && <div style={{ textAlign: "center", fontSize: 30, marginTop: 16 }}>{letter.reaction}</div>}
+          <div style={{ textAlign: "center", marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.line}`, fontFamily: SCRIPT, fontSize: 17, color: "#C58AA0" }}>היומן של {names.a} ו{names.b} ❤️</div>
         </div>
       </div>
     </Modal>
@@ -772,6 +811,8 @@ function App() {
   const [data, setData] = useState(null);
   const lastSavedRef = useRef("");
   const saveTimerRef = useRef(null);
+  const seenLettersRef = useRef(null);
+  const localLettersRef = useRef(new Set());
 
   const [now, setNow] = useState(Date.now());
   const [me, setMe] = useState("b");
@@ -850,12 +891,35 @@ function App() {
     setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
     due.forEach((r) => {
       if (nowMs - new Date(r.at).getTime() < 120000) {
-        setAlertMsg(r.text);
-        setTimeout(() => setAlertMsg((a) => (a === r.text ? null : a)), 6000);
+        const msg = "תזכורת: " + r.text;
+        setAlertMsg(msg);
+        setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 6000);
         try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("תזכורת ❤️", { body: r.text }); } catch {}
       }
     });
   }, [now]);
+
+  // notify when a new letter arrives from the other device (works while app is open / in background)
+  useEffect(() => {
+    if (!data) return;
+    const ids = data.letters.map((l) => l.id);
+    if (seenLettersRef.current === null) {
+      // first load: remember existing letters, don't notify, ask for permission once
+      seenLettersRef.current = new Set(ids);
+      try { if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {}
+      return;
+    }
+    const fresh = data.letters.filter((l) => !seenLettersRef.current.has(l.id));
+    fresh.forEach((l) => {
+      seenLettersRef.current.add(l.id);
+      if (localLettersRef.current.has(l.id)) return; // our own letter — don't notify ourselves
+      const name = data.names[l.from] || "";
+      const msg = "💌 מכתב חדש מ" + name;
+      setAlertMsg(msg);
+      setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 7000);
+      try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification(msg, { body: l.text ? l.text.slice(0, 90) : "" }); } catch {}
+    });
+  }, [data]);
 
   /* derived (guarded for null data so hooks always run) */
   const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake || l.createdAt + l.durationHours * 3600000 > now).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
@@ -884,6 +948,7 @@ function App() {
     finally { setAuthBusy(false); }
   }
   async function doSignOut() { try { await fb.signOut(fb.auth); } catch (e) { console.error(e); } }
+  async function doResetPassword() { try { if (user && user.email) { await fb.sendPasswordResetEmail(fb.auth, user.email); return true; } return false; } catch (e) { console.error(e); return false; } }
 
   async function resendVerification() {
     setVerifyMsg(""); setVerifyBusy(true);
@@ -938,21 +1003,11 @@ function App() {
 
   const act = (d) => (d.activityDates && d.activityDates.includes(todayISO) ? d.activityDates : [...(d.activityDates || []), todayISO]);
 
-  /* upload a photo to Firebase Storage, return its download URL + path */
-  async function uploadPhoto(blob, id) {
-    const ext = blob && blob.type === "image/webp" ? "webp" : "jpg";
-    const path = `users/${user.uid}/letters/${id}.${ext}`;
-    const r = fb.sRef(fb.storage, path);
-    await fb.uploadBytes(r, blob, { contentType: (blob && blob.type) || "image/jpeg" });
-    const url = await fb.getDownloadURL(r);
-    return { url, path };
-  }
-
   /* mutations */
-  const addLetter = (l) => { setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); };
+  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
   const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true } : l) }));
-  const delLetter = (id) => { setData((d) => { const l = d.letters.find((x) => x.id === id); if (l && l.photoPath) { try { fb.deleteObject(fb.sRef(fb.storage, l.photoPath)).catch(() => {}); } catch {} } return { ...d, letters: d.letters.filter((x) => x.id !== id) }; }); setOpenLetter(null); };
+  const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
   const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
   const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
   const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
@@ -991,7 +1046,7 @@ function App() {
         <div className="slide-down" style={{ position: "fixed", top: 14, left: 0, right: 0, zIndex: 60, display: "flex", justifyContent: "center", padding: "0 12px" }}>
           <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: "#fff", boxShadow: "0 16px 40px -16px rgba(150,40,80,.5)", border: `1px solid ${C.line}`, maxWidth: 400 }}>
             <Bell style={{ width: 18, height: 18, color: "#EC4899" }} />
-            <span className="font-bold" style={{ fontSize: 14, color: C.ink }}>תזכורת: {alertMsg}</span>
+            <span className="font-bold" style={{ fontSize: 14, color: C.ink }}>{alertMsg}</span>
             <button onClick={() => setAlertMsg(null)} className="shrink-0"><X style={{ width: 16, height: 16, color: C.muted }} /></button>
           </div>
         </div>
@@ -1229,16 +1284,61 @@ function App() {
         if (!l) return null;
         return <LetterViewer letter={l} names={data.names} now={now} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
       })()}
-      {modal === "letter" && (<Modal onClose={() => setModal(null)} accent={meColor}><WriteLetterForm from={me} names={data.names} onUploadPhoto={uploadPhoto} onSave={addLetter} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "letter" && (<Modal onClose={() => setModal(null)} accent={meColor}><WriteLetterForm from={me} names={data.names} onSave={addLetter} onClose={() => setModal(null)} /></Modal>)}
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
       {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={data.names} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
       {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
-      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
     </div>
   );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+/* Build the app icon (sunset journal + heart) on a canvas, then wire up
+   favicon, apple-touch-icon and a web app manifest — all inline, no extra files. */
+(function () {
+  function roundRect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+  function heart(x, cx, cy, s, color) { x.save(); x.translate(cx, cy); x.scale(s / 32, s / 32); x.beginPath(); x.moveTo(0, 10); x.bezierCurveTo(-14, -4, -10, -20, 0, -10); x.bezierCurveTo(10, -20, 14, -4, 0, 10); x.closePath(); x.fillStyle = color; x.fill(); x.restore(); }
+  function makeIcon(S) {
+    var c = document.createElement("canvas"); c.width = c.height = S; var x = c.getContext("2d");
+    var g = x.createLinearGradient(0, 0, S, S); g.addColorStop(0, "#FF9F5A"); g.addColorStop(.55, "#FB6F7F"); g.addColorStop(1, "#EE4F6E");
+    roundRect(x, 0, 0, S, S, S * 0.22); x.fillStyle = g; x.fill();
+    x.save(); x.translate(S * 0.5, S * 0.52); x.rotate(-0.05);
+    var bw = S * 0.46, bh = S * 0.56;
+    x.shadowColor = "rgba(120,20,40,.30)"; x.shadowBlur = S * 0.05; x.shadowOffsetY = S * 0.02;
+    roundRect(x, -bw / 2, -bh / 2, bw, bh, S * 0.07); x.fillStyle = "#FFFFFF"; x.fill();
+    x.shadowColor = "transparent";
+    roundRect(x, -bw / 2, -bh / 2, S * 0.11, bh, S * 0.055); x.fillStyle = "#F7C9DB"; x.fill();
+    heart(x, S * 0.03, 0, S * 0.30, "#EC4899");
+    x.restore();
+    return c.toDataURL("image/png");
+  }
+  function setLink(rel, href, sizes) {
+    var l = document.createElement("link"); l.rel = rel; l.href = href; if (sizes) l.setAttribute("sizes", sizes);
+    document.head.appendChild(l);
+  }
+  try {
+    var i192 = makeIcon(192), i512 = makeIcon(512);
+    setLink("icon", i192, "192x192");
+    setLink("apple-touch-icon", i192);
+    var startUrl = location.href.split("#")[0].split("?")[0];
+    var scope = startUrl.replace(/[^/]*$/, "");
+    var manifest = {
+      name: "היומן של אסף וליאל", short_name: "היומן שלנו",
+      description: "היומן הזוגי שלנו", start_url: startUrl, scope: scope,
+      display: "standalone", orientation: "portrait",
+      background_color: "#FDF1F4", theme_color: "#EE4F6E", lang: "he", dir: "rtl",
+      icons: [
+        { src: i192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: i512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    var blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    setLink("manifest", URL.createObjectURL(blob));
+  } catch (e) { console.error("icon/manifest setup failed", e); }
+})();
 </script>
 </body>
 </html>
