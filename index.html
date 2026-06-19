@@ -462,10 +462,10 @@ function CountdownForm({ current, names, defaultBy, onSave, onDelete, onClose })
   );
 }
 
-function addToPhoneCalendar(text, atISO) {
+function buildICSHref(text, atISO) {
   try {
     const start = new Date(atISO);
-    if (isNaN(start.getTime())) return;
+    if (isNaN(start.getTime())) return "";
     const z = (n) => String(n).padStart(2, "0");
     const fmt = (d) => d.getUTCFullYear() + z(d.getUTCMonth() + 1) + z(d.getUTCDate()) + "T" + z(d.getUTCHours()) + z(d.getUTCMinutes()) + z(d.getUTCSeconds()) + "Z";
     const end = new Date(start.getTime() + 15 * 60000);
@@ -483,12 +483,8 @@ function addToPhoneCalendar(text, atISO) {
       "END:VALARM",
       "END:VEVENT", "END:VCALENDAR",
     ].join("\r\n");
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, "_blank");
-    if (!w) window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
-    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 10000);
-  } catch (e) { console.error("calendar add failed", e); }
+    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  } catch (e) { console.error("ics build failed", e); return ""; }
 }
 
 function ReminderForm({ onSave, onClose }) {
@@ -507,10 +503,17 @@ function ReminderForm({ onSave, onClose }) {
       <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-3"} style={inputStyle} />
       <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
         <span style={{ fontSize: 14 }}>📅</span>
-        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>נוסיף את התזכורת גם ליומן של הטלפון — ככה תקבל התראה גם כשהאפליקציה סגורה. אשרו "הוסף" במסך שייפתח.</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>הכפתור יפתח את יומן הטלפון עם התראה מוכנה — ככה תקבל התראה גם כשהאפליקציה סגורה. אשרו "הוסף" במסך שייפתח.</span>
       </div>
-      <button disabled={!text.trim()} onClick={() => { const r = { id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false }; addToPhoneCalendar(r.text, r.at); onSave(r); }}
-        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת + ליומן</button>
+      {text.trim() ? (
+        <a href={buildICSHref(text.trim(), new Date(dt).toISOString())}
+          onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
+          className="block w-full text-center rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)", textDecoration: "none" }}>
+          שמירה + הוספה ליומן 📅
+        </a>
+      ) : (
+        <button disabled className="w-full rounded-3xl py-4 text-white font-extrabold opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירה + הוספה ליומן 📅</button>
+      )}
     </div>
   );
 }
@@ -1322,7 +1325,7 @@ function App() {
                 <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 14, color: C.ink, textDecoration: r.fired ? "line-through" : "none" }}>{r.text}</div>
                   <div style={{ fontSize: 11, color: C.muted }}>{new Date(r.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{r.fired ? " · בוצע" : ""}</div></div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {!r.fired && <button onClick={() => addToPhoneCalendar(r.text, r.at)} title="הוסף ליומן הטלפון" style={{ fontSize: 17 }}>📅</button>}
+                  {!r.fired && <a href={buildICSHref(r.text, r.at)} title="הוסף ליומן הטלפון" style={{ fontSize: 17, textDecoration: "none" }}>📅</a>}
                   <button onClick={() => delReminder(r.id)}><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
                 </div>
               </div>
