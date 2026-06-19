@@ -110,6 +110,37 @@ const DATE_IDEAS = [
   "לבקר במקום חדש בעיר שלא הייתם בו 🗺️",
 ];
 
+const DAILY_QUESTIONS = [
+  "מה הדבר הקטן שעשיתי לאחרונה שגרם לך לחייך?",
+  "אם היינו טסים מחר לכל מקום בעולם — לאן?",
+  "מה הכי אהבת בנו השבוע?",
+  "איזו הרגשה ליוותה אותך היום?",
+  "מה משהו חדש שהיית רוצה שנתנסה בו יחד?",
+  "מתי הרגשת הכי קרוב/ה אליי לאחרונה?",
+  "מה הזיכרון האהוב עליך מאיתנו?",
+  "מה הדבר שאני עושה ואתה/את הכי מעריך/ה?",
+  "אם היה לנו יום חופשי מושלם יחד — איך הוא נראה?",
+  "מה היית רוצה שאדע עליך שאולי לא אמרת?",
+  "על מה אתה/את הכי גאה בעצמך החודש?",
+  "מה משהו קטן שאני יכול/ה לעשות שיעשה לך את היום?",
+  "איזה שיר מזכיר לך אותנו?",
+  "מה החלום שהכי בא לך שנגשים יחד?",
+  "מה הדבר שגרם לך להתאהב בי?",
+  "אם היינו פותחים עסק יחד — מה זה היה?",
+  "מה הכי הצחיק אותך לאחרונה?",
+  "מה משהו שאני אומר/ת שתמיד מרגיע אותך?",
+  "איזו מסורת קטנה היית רוצה שתהיה רק שלנו?",
+  "מה הכי אתה/את מצפה לו בתקופה הקרובה?",
+  "מה משהו שלמדת עליי השנה?",
+  "איפה אתה/את רואה אותנו בעוד חמש שנים?",
+  "מה הדבר שהכי גרם לך להרגיש אהוב/ה לאחרונה?",
+  "מה הארוחה שהיית רוצה שנבשל יחד?",
+  "מה משהו שאתה/את אסיר/ת תודה עליו היום?",
+  "איזה רגע קטן מהיום היית רוצה לשמר?",
+  "מה הדבר שאתה/את הכי אוהב/ת לעשות איתי בבית?",
+  "אם היית כותב/ת לי פתק אחד — מה היה כתוב בו?",
+];
+
 const THEMES = {
   sunset: { name: "שקיעה",
     bg: "linear-gradient(180deg,#FDF1F4 0%,#FAEAF0 60%,#F6E7EE 100%)",
@@ -249,9 +280,10 @@ function buildSeed() {
     anniversary: null,
     moods: { a: { date: "", emoji: "" }, b: { date: "", emoji: "" } },
     activityDates: [],
-    features: { countdowns: true, mood: true, keepsakes: true, dreams: true, watchlist: true, reminders: true, dateIdea: true, roulette: true },
+    features: { countdowns: true, keepsakes: true, dreams: true, watchlist: true, reminders: true, dateIdea: true, roulette: true, dailyQ: true, onThisDay: true },
     ntfyOn: false,
     ntfyTopic: "",
+    dailyAnswers: {},
     dateIdeas: DATE_IDEAS.slice(),
     roulette: ["מי בוחר סרט 🎬", "מי מכין ארוחה 🍳", "נשיקה 💋", "חיבוק גדול 🤗", "מי שוטף כלים 🧽", "10 דק׳ עיסוי 💆"],
     countdowns: [],
@@ -283,6 +315,7 @@ function normalize(d) {
   out.ntfyTopic = d.ntfyTopic || "";
   out.dateIdeas = Array.isArray(d.dateIdeas) && d.dateIdeas.length ? d.dateIdeas : DATE_IDEAS.slice();
   out.roulette = Array.isArray(d.roulette) ? d.roulette : s.roulette;
+  out.dailyAnswers = (d.dailyAnswers && typeof d.dailyAnswers === "object") ? d.dailyAnswers : {};
   if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
   else out.countdowns = d.countdowns;
   return out;
@@ -369,15 +402,25 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState(null);
   const [dur, setDur] = useState(24);
+  const [sealed, setSealed] = useState(false);
+  const [openDate, setOpenDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const fileRef = useRef(null);
   const accent = from === "b" ? "#EC4899" : "#3B82F6";
   const keep = dur === 0;
+  const tomorrow = isoOf(new Date(Date.now() + 864e5));
   async function pick(e) { const f = e.target.files && e.target.files[0]; if (!f) return; setBusy(true); setErr(""); try { setPhoto(await fileToDataURL(f)); } catch { setErr("לא הצלחנו לטעון את התמונה"); } finally { setBusy(false); } }
   function submit() {
     if (!text.trim()) return;
-    onSave({ id: uid(), from, text: text.trim(), photo: keep ? null : photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
+    if (sealed) {
+      if (!openDate) { setErr("בחרו תאריך פתיחה"); return; }
+      const openAt = new Date(openDate + "T08:00:00").getTime();
+      if (isNaN(openAt) || openAt <= Date.now()) { setErr("בחרו תאריך עתידי"); return; }
+      onSave({ id: uid(), from, text: text.trim(), photo: null, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
+    } else {
+      onSave({ id: uid(), from, text: text.trim(), photo: keep ? null : photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
+    }
   }
   return (
     <div className="p-5">
@@ -390,27 +433,40 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
       </div>
       <Label>מה רצית להגיד? 💌</Label>
       <textarea autoFocus rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="כתבו משהו מתוק…" className={inputCls + " resize-none mb-4 leading-relaxed"} style={inputStyle} />
-      <Label>תמונה (לא חובה)</Label>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pick} />
-      {photo ? (
-        <div className="relative mb-3">
-          <img src={photo} alt="" className="w-full rounded-2xl object-cover" style={{ maxHeight: 240 }} />
-          <RoundBtn onClick={() => setPhoto(null)} className="w-8 h-8 absolute top-2 left-2" style={{ background: "rgba(0,0,0,.5)" }}><X style={{ width: 16, height: 16, color: "#fff" }} /></RoundBtn>
-        </div>
-      ) : (
-        <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full mb-3 rounded-2xl py-4 grid place-items-center gap-1 transition active:scale-95" style={{ border: "1.5px dashed #E7C6D2", background: "#FBF4F7", color: accent }}>
-          <ImagePlus style={{ width: 24, height: 24 }} />
-          <span className="font-semibold" style={{ fontSize: 13 }}>{busy ? "טוען…" : "הוספת תמונה"}</span>
-        </button>
-      )}
-      <Label>נעלם אחרי</Label>
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        {[{ v: 12, l: "12 שעות" }, { v: 24, l: "24 שעות" }, { v: 48, l: "יומיים" }, { v: 0, l: "לתמיד" }].map((o) => (
-          <button key={o.v} onClick={() => setDur(o.v)} className="rounded-xl py-2.5 font-bold transition active:scale-95"
-            style={dur === o.v ? { fontSize: 12.5, background: accent, color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.muted }}>{o.l}</button>
-        ))}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <button onClick={() => setSealed(false)} className="rounded-2xl py-2.5 font-bold transition active:scale-95" style={!sealed ? { fontSize: 13, background: accent, color: "#fff" } : { fontSize: 13, background: "#F6EEF2", color: C.muted }}>💌 מכתב רגיל</button>
+        <button onClick={() => setSealed(true)} className="rounded-2xl py-2.5 font-bold transition active:scale-95" style={sealed ? { fontSize: 13, background: "#7C3AED", color: "#fff" } : { fontSize: 13, background: "#F6EEF2", color: C.muted }}>🔒 מכתב חתום</button>
       </div>
-      {keep && photo && <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#9A7B2E", background: "#FFF8E8", border: "1px solid #FCE5BD" }}>מכתב "לתמיד" נשמר במזכרות — הטקסט יישמר, אך התמונה לא 💛</div>}
+
+      {!sealed && (<>
+        <Label>תמונה (לא חובה)</Label>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pick} />
+        {photo ? (
+          <div className="relative mb-3">
+            <img src={photo} alt="" className="w-full rounded-2xl object-cover" style={{ maxHeight: 240 }} />
+            <RoundBtn onClick={() => setPhoto(null)} className="w-8 h-8 absolute top-2 left-2" style={{ background: "rgba(0,0,0,.5)" }}><X style={{ width: 16, height: 16, color: "#fff" }} /></RoundBtn>
+          </div>
+        ) : (
+          <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full mb-3 rounded-2xl py-4 grid place-items-center gap-1 transition active:scale-95" style={{ border: "1.5px dashed #E7C6D2", background: "#FBF4F7", color: accent }}>
+            <ImagePlus style={{ width: 24, height: 24 }} />
+            <span className="font-semibold" style={{ fontSize: 13 }}>{busy ? "טוען…" : "הוספת תמונה"}</span>
+          </button>
+        )}
+        <Label>נעלם אחרי</Label>
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[{ v: 12, l: "12 שעות" }, { v: 24, l: "24 שעות" }, { v: 48, l: "יומיים" }, { v: 0, l: "לתמיד" }].map((o) => (
+            <button key={o.v} onClick={() => setDur(o.v)} className="rounded-xl py-2.5 font-bold transition active:scale-95"
+              style={dur === o.v ? { fontSize: 12.5, background: accent, color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.muted }}>{o.l}</button>
+          ))}
+        </div>
+        {keep && photo && <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#9A7B2E", background: "#FFF8E8", border: "1px solid #FCE5BD" }}>מכתב "לתמיד" נשמר במזכרות — הטקסט יישמר, אך התמונה לא 💛</div>}
+      </>)}
+
+      {sealed && (<>
+        <Label>נפתח בתאריך 🔒</Label>
+        <input type="date" min={tomorrow} value={openDate} onChange={(e) => setOpenDate(e.target.value)} className={inputCls + " mb-2"} style={inputStyle} />
+        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול לשניכם עד התאריך שתבחרו, ואז ייפתח אוטומטית. (תמונה לא נשמרת במכתב חתום)</div>
+      </>)}
       {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
       <button disabled={!text.trim()} onClick={submit}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>שליחת המכתב 💗</button>
@@ -572,7 +628,7 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
   const delIdea = (i) => setIdeas((a) => a.filter((_, idx) => idx !== i));
   const [pwMsg, setPwMsg] = useState("");
   const toggleFeat = (k) => setFeat((f) => ({ ...f, [k]: !f[k] }));
-  const FEATS = [["countdowns", "ספירה לאחור ⏳"], ["mood", "מצב רוח 😊"], ["keepsakes", "מזכרות ⭐"], ["dreams", "רשימת חלומות ☁️"], ["watchlist", "רשימת צפייה 🎬"], ["reminders", "תזכורות 🔔"], ["dateIdea", "רעיון לדייט 💡"], ["roulette", "רולטה 🎡"]];
+  const FEATS = [["dailyQ", "שאלה יומית 💌"], ["onThisDay", "ביום הזה 📅"], ["countdowns", "ספירה לאחור ⏳"], ["keepsakes", "מזכרות ⭐"], ["dreams", "רשימת חלומות ☁️"], ["watchlist", "רשימת צפייה 🎬"], ["reminders", "תזכורות 🔔"], ["dateIdea", "רעיון לדייט 💡"], ["roulette", "רולטה 🎡"]];
   const toggleNtfy = () => setNtOn((v) => { const nv = !v; if (nv && !ntTopic) setNtTopic("yomanzugi-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)); return nv; });
   const copyTopic = () => { try { navigator.clipboard.writeText(ntTopic); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {} };
   async function resetPw() { setPwMsg("שולח…"); const ok = await onResetPassword(); setPwMsg(ok ? "נשלח מייל לאיפוס הסיסמה — בדקו את תיבת הדואר" : "שגיאה בשליחה, נסו שוב"); }
@@ -737,6 +793,19 @@ function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClo
     } catch (e) { console.error("save image failed", e); }
     finally { setSaving(false); }
   }
+  const locked = letter.openAt && letter.openAt > now;
+  if (locked) return (
+    <Modal onClose={onClose} accent="#7C3AED">
+      <div className="p-6 text-center">
+        <div style={{ fontSize: 44, marginBottom: 10 }}>🔒</div>
+        <div className="font-extrabold mb-1" style={{ fontSize: 18, color: C.ink }}>מכתב חתום מ{names[letter.from]}</div>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.6 }}>המכתב נעול וייפתח אוטומטית ב:</div>
+        <div className="font-extrabold mb-5" style={{ fontSize: 17, color: "#7C3AED" }}>{new Date(letter.openAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" })}</div>
+        <button onClick={onClose} className="w-full rounded-3xl py-3.5 text-white font-extrabold transition active:scale-95 mb-2" style={{ fontSize: 15, background: "linear-gradient(95deg,#7C3AED,#EC4899)" }}>סגירה</button>
+        <button onClick={onDelete} className="w-full rounded-2xl py-2.5 font-bold transition active:scale-95" style={{ fontSize: 13, background: "transparent", color: "#EF4444" }}>מחיקת המכתב החתום</button>
+      </div>
+    </Modal>
+  );
   return (
     <Modal onClose={onClose} accent={accent}>
       <div className="p-5">
@@ -973,6 +1042,54 @@ function LinkScreen({ busy, error, onCreate, onJoin, onSignOut }) {
   );
 }
 
+function DailyQuestionCard({ question, myAns, partnerAns, meName, partnerName, meColor, partnerColor, onSave }) {
+  const [draft, setDraft] = useState("");
+  const answered = !!myAns;
+  const bothDone = !!myAns && !!partnerAns;
+  const box = (label, color, text) => (
+    <div className="rounded-2xl p-3" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color, marginBottom: 3 }}>{label}</div>
+      <div className="text-right" style={{ fontSize: 14, color: C.ink, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{text}</div>
+    </div>
+  );
+  return (
+    <Card className="fade-up p-4" style={{ animationDelay: ".07s", background: "linear-gradient(135deg,#FFF5F9,#F3F0FF)" }}>
+      <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 16 }}>💌</span><span className="font-extrabold" style={{ fontSize: 13, color: "#9D4EDD" }}>השאלה של היום</span></div>
+      <div className="text-right font-bold mb-3" style={{ fontSize: 16, color: C.ink, lineHeight: 1.4 }}>{question}</div>
+      {!answered && (<>
+        <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} placeholder="התשובה שלך…" className={inputCls} style={{ ...inputStyle, resize: "none" }} />
+        <button onClick={() => { if (draft.trim()) { onSave(draft.trim()); setDraft(""); } }} disabled={!draft.trim()} className="w-full mt-2 rounded-2xl py-3 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירת התשובה</button>
+        <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 8 }}>{partnerAns ? (partnerName + " כבר ענה/תה — ענה/י כדי לגלות 👀") : "ענו שניכם כדי לגלות את התשובות"}</div>
+      </>)}
+      {answered && !bothDone && (<div className="space-y-2">
+        {box(meName, meColor, myAns)}
+        <div style={{ fontSize: 12.5, color: C.muted, textAlign: "center" }}>ממתינים שֶ{partnerName} יענה/תענה… 🤍</div>
+      </div>)}
+      {bothDone && (<div className="space-y-2">
+        {box(meName, meColor, myAns)}
+        {box(partnerName, partnerColor, partnerAns)}
+      </div>)}
+    </Card>
+  );
+}
+
+function OnThisDayCard({ items, names }) {
+  if (!items || !items.length) return null;
+  return (
+    <Card className="fade-up p-4" style={{ animationDelay: ".09s" }}>
+      <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 16 }}>📅</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>ביום הזה</span></div>
+      <div className="space-y-2">
+        {items.map((it, i) => (
+          <div key={i} className="rounded-2xl p-3" style={{ background: C.soft }}>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>{it.ago}{names[it.from] ? " · " + names[it.from] : ""}</div>
+            <div className="text-right" style={{ fontSize: 14, color: C.ink, lineHeight: 1.45 }}>{it.text}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 const ROULETTE_COLORS = ["#F472B6", "#A855F7", "#60A5FA", "#34D399", "#FBBF24", "#FB7185", "#818CF8", "#F59E0B"];
 function RouletteCard({ options, onAdd, onDelete }) {
   const [rot, setRot] = useState(0);
@@ -1194,9 +1311,16 @@ function App() {
     }
   }, [data]);
   const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake || l.createdAt + l.durationHours * 3600000 > now).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
-  const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake).sort((a, b) => b.createdAt - a.createdAt), [data]);
+  const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake && (!l.openAt || l.openAt <= now)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
   const sortedCds = useMemo(() => !data ? [] : [...data.countdowns].sort((a, b) => new Date(a.date) - new Date(b.date)), [data]);
   const eventsByDate = useMemo(() => { const map = {}; if (data) for (const e of data.events) { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); } return map; }, [data]);
+  const onThisDayItems = useMemo(() => {
+    if (!data) return [];
+    const t = new Date(); const dom = t.getDate(); const startMonth = new Date(t.getFullYear(), t.getMonth(), 1).getTime();
+    return data.letters.filter((l) => l.keepsake && l.text && (!l.openAt || l.openAt <= Date.now()) && new Date(l.createdAt).getDate() === dom && l.createdAt < startMonth)
+      .sort((a, b) => b.createdAt - a.createdAt).slice(0, 4)
+      .map((l) => { const d = new Date(l.createdAt); const months = (t.getFullYear() - d.getFullYear()) * 12 + (t.getMonth() - d.getMonth()); let ago; if (months >= 12) { const y = Math.floor(months / 12); ago = y === 1 ? "לפני שנה" : "לפני " + y + " שנים"; } else { ago = months === 1 ? "לפני חודש" : "לפני " + months + " חודשים"; } return { text: l.text, from: l.from, ago }; });
+  }, [data, todayISO]);
 
   /* auth handlers */
   async function doSignIn(email, password) {
@@ -1299,6 +1423,12 @@ function App() {
   const N = { a: data.names.a || "אני", b: data.names.b || "את/ה" };
   const coupleTitle = (data.names.a || data.names.b) ? `${data.names.a} ו${data.names.b}` : "היומן שלנו";
   const F = data.features || {};
+  const partner = me === "a" ? "b" : "a";
+  const dayNum = Math.floor(new Date(todayISO + "T00:00:00").getTime() / 864e5);
+  const todayQuestion = DAILY_QUESTIONS[((dayNum % DAILY_QUESTIONS.length) + DAILY_QUESTIONS.length) % DAILY_QUESTIONS.length];
+  const todayAns = (data.dailyAnswers && data.dailyAnswers[todayISO]) || {};
+  const myAns = todayAns[me] || null;
+  const partnerAns = todayAns[partner] || null;
   const ideaBank = (data.dateIdeas && data.dateIdeas.length) ? data.dateIdeas : DATE_IDEAS;
   const sendThinking = () => { if (!data.ntfyOn || !data.ntfyTopic) return; sendNtfy(data.ntfyTopic, "💭 " + N[me] + " חושב/ת עלייך עכשיו 🥰"); setThinkSent(true); setTimeout(() => setThinkSent(false), 2500); };
   const sendMsg = () => { if (!data.ntfyOn || !data.ntfyTopic || !msgTxt.trim()) return; sendNtfy(data.ntfyTopic, "💬 " + N[me] + ": " + msgTxt.trim()); setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500); };
@@ -1307,9 +1437,10 @@ function App() {
   const pendingWatch = data.watchlist.filter((w) => !w.done).length;
 
   const act = (d) => (d.activityDates && d.activityDates.includes(todayISO) ? d.activityDates : [...(d.activityDates || []), todayISO]);
+  const saveDailyAnswer = (text) => setData((d) => { const day = { ...((d.dailyAnswers && d.dailyAnswers[todayISO]) || {}) }; day[me] = text; return { ...d, dailyAnswers: { ...(d.dailyAnswers || {}), [todayISO]: day }, activityDates: act(d) }; });
 
   /* mutations */
-  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, "💌 מכתב חדש מ" + N[l.from]); };
+  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from])); };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
   const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true, photo: null } : l) }));
   const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
@@ -1406,6 +1537,10 @@ function App() {
           </Card>
         )}
 
+        {F.dailyQ && <DailyQuestionCard question={todayQuestion} myAns={myAns} partnerAns={partnerAns} meName={N[me]} partnerName={N[partner]} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} onSave={saveDailyAnswer} />}
+
+        {F.onThisDay && <OnThisDayCard items={onThisDayItems} names={N} />}
+
         {F.countdowns && (heroCd ? (
           <Card className="fade-up relative overflow-hidden text-white p-5"
             style={{ animationDelay: ".1s", border: "none", background: T.hero, boxShadow: `0 22px 46px -18px ${T.heroShadow}` }}>
@@ -1455,8 +1590,6 @@ function App() {
           </div>
         )}
 
-        {F.mood && <MoodCard names={N} moodA={moodA} moodB={moodB} open={moodPickerFor} onOpen={(p) => setMoodPickerFor((x) => (x === p ? null : p))} onPick={setMood} />}
-
         {data.longDistance && <LongDistanceCard people={data.people} names={N} now={now} />}
 
         {F.dateIdea && (
@@ -1476,8 +1609,19 @@ function App() {
             <Card className="p-6 text-center"><div className="font-bold" style={{ fontSize: 15, color: C.ink }}>אין מכתבים פתוחים כרגע 💌</div><div style={{ fontSize: 13, marginTop: 2, color: C.muted }}>כתבו מכתב חדש זה לזה למטה</div></Card>
           )}
           {visibleLetters.map((l) => {
+            const locked = l.openAt && l.openAt > now;
             const accent = l.from === "b" ? "#EC4899" : "#3B82F6";
-            const tint = l.from === "b" ? "#FFF5F9" : "#F4F8FF";
+            const tint = locked ? "#F3F0FF" : (l.from === "b" ? "#FFF5F9" : "#F4F8FF");
+            if (locked) return (
+              <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
+                <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: "#7C3AED" }} />
+                <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: "#EBE3FB", fontSize: 22 }}>🔒</div>
+                <div className="flex-1 min-w-0 text-right">
+                  <div className="font-extrabold" style={{ fontSize: 15, color: C.ink }}>מכתב חתום מ{N[l.from]}</div>
+                  <div style={{ fontSize: 12.5, marginTop: 2, color: "#7C3AED" }}>נפתח ב-{new Date(l.openAt).toLocaleDateString("he-IL")} 🔒</div>
+                </div>
+              </Card>
+            );
             return (
               <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
                 <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: accent }} />
