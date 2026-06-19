@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>היומן של אסף וליאל ❤️</title>
+<meta name="theme-color" content="#EE4F6E" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="היומן שלנו" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gveret+Levin&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style>
+  html,body{margin:0;padding:0;}
+  body{font-family:Rubik,system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  *::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase (loads as a module, then exposes helpers on window.__fb) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAan_Ogz5E2K-6nJtlLvpFiLXiUYSDXxyM",
+    authDomain: "liel-and-asaf.firebaseapp.com",
+    projectId: "liel-and-asaf",
+    storageBucket: "liel-and-asaf.firebasestorage.app",
+    messagingSenderId: "94332355608",
+    appId: "1:94332355608:web:80b08c94034e50be63ef6d",
+    measurementId: "G-JQ24Z2D5F5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
+
+  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, onSnapshot };
+  window.dispatchEvent(new Event("fb-ready"));
+</script>
+
+<!-- The app (JSX, transpiled in the browser by Babel) -->
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ============================ icons (inline SVG) ============================ */
+function Svg({ style, children }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>{children}</svg>;
+}
+const Heart = ({ style }) => <Svg style={style}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.49 4.04 3 5.5l7 7Z" /></Svg>;
+const Calendar = ({ style }) => <Svg style={style}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Svg>;
+const Cloud = ({ style }) => <Svg style={style}><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></Svg>;
+const Trash2 = ({ style }) => <Svg style={style}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" /></Svg>;
+const Camera = ({ style }) => <Svg style={style}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" /><circle cx="12" cy="13" r="3" /></Svg>;
+const Clock = ({ style }) => <Svg style={style}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></Svg>;
+const Plus = ({ style }) => <Svg style={style}><path d="M12 5v14M5 12h14" /></Svg>;
+const X = ({ style }) => <Svg style={style}><path d="M18 6 6 18M6 6l12 12" /></Svg>;
+const Check = ({ style }) => <Svg style={style}><path d="M20 6 9 17l-5-5" /></Svg>;
+const Pencil = ({ style }) => <Svg style={style}><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></Svg>;
+const ChevronRight = ({ style }) => <Svg style={style}><path d="m9 18 6-6-6-6" /></Svg>;
+const ChevronLeft = ({ style }) => <Svg style={style}><path d="m15 18-6-6 6-6" /></Svg>;
+const ImagePlus = ({ style }) => <Svg style={style}><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7M16 5h6M19 2v6" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></Svg>;
+const Sparkles = ({ style }) => <Svg style={style}><path d="M12 3l1.9 5.8L19.7 10l-5.8 1.9L12 17.7 10.1 11.9 4.3 10l5.8-1.9z" /></Svg>;
+const Bell = ({ style }) => <Svg style={style}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Svg>;
+const ImageIcon = ({ style }) => <Svg style={style}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" /></Svg>;
+const Globe = ({ style }) => <Svg style={style}><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20" /></Svg>;
+const LogOut = ({ style }) => <Svg style={style}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></Svg>;
+
+/* ============================ constants ============================ */
+const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+const DOW = ["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
+
+const CATS = {
+  fun:      { label: "חברים / בילוי",   bg: "#7C3AED" },
+  work:     { label: "עבודה / לימודים", bg: "#E08368" },
+  personal: { label: "אישי",            bg: "#3B82F6" },
+  love:     { label: "יחד ❤️",          bg: "#EC4899" },
+};
+
+const C = { card: "#FFFFFF", ink: "#2B2533", muted: "#A29AA8", soft: "#FAF4F7", line: "#F0E2EA" };
+const SCRIPT = "'Gveret Levin', 'Rubik', system-ui, cursive";
+const BODY = "Rubik, system-ui, sans-serif";
+const MOOD_EMOJIS = ["😍","🥰","😊","😌","😎","😴","🥲","😤","🥳","💪"];
+const REACTIONS = ["❤️","😍","🥹","😂","🥰","🔥","👏"];
+
+const THEMES = {
+  sunset: { name: "שקיעה",
+    bg: "linear-gradient(180deg,#FDF1F4 0%,#FAEAF0 60%,#F6E7EE 100%)",
+    blobs: ["#FFD8C2","#E9DCFF","#FFD3E4"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(255,232,178,.85) 0%, rgba(255,232,178,0) 42%), linear-gradient(140deg,#FF9F5A 0%,#FB6F7F 55%,#EE4F6E 100%)",
+    heroShadow: "rgba(238,79,110,.75)", cta: "linear-gradient(95deg,#EC4899,#7C3AED)",
+    icon: "linear-gradient(135deg,#FBCFE8,#F472B6)", accent: "#DB2777", swatch: "#FB6F7F" },
+  ocean: { name: "אוקיינוס",
+    bg: "linear-gradient(180deg,#EEF7FB 0%,#E7F1FA 60%,#E6EEF8 100%)",
+    blobs: ["#BFE3F5","#CFE0FF","#C2F0E8"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(186,230,253,.85) 0%, rgba(186,230,253,0) 42%), linear-gradient(140deg,#22B8CF 0%,#3B82F6 55%,#6366F1 100%)",
+    heroShadow: "rgba(59,130,246,.7)", cta: "linear-gradient(95deg,#0EA5E9,#6366F1)",
+    icon: "linear-gradient(135deg,#A5D8FF,#3B82F6)", accent: "#0284C7", swatch: "#3B82F6" },
+  meadow: { name: "אחו",
+    bg: "linear-gradient(180deg,#F0F8EE 0%,#EAF4E6 60%,#E7F1E2 100%)",
+    blobs: ["#CDEBC0","#DFF3D0","#FBF0C9"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(217,245,196,.85) 0%, rgba(217,245,196,0) 42%), linear-gradient(140deg,#34D399 0%,#10B981 55%,#0D9488 100%)",
+    heroShadow: "rgba(16,185,129,.6)", cta: "linear-gradient(95deg,#10B981,#0D9488)",
+    icon: "linear-gradient(135deg,#BBF7D0,#10B981)", accent: "#059669", swatch: "#10B981" },
+  dusk: { name: "דמדומים",
+    bg: "linear-gradient(180deg,#F2EEFB 0%,#EDE7F8 60%,#EAE6F6 100%)",
+    blobs: ["#D8C9F5","#E9D6FF","#FAD0E8"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(221,214,254,.85) 0%, rgba(221,214,254,0) 42%), linear-gradient(140deg,#8B5CF6 0%,#7C3AED 55%,#DB2777 100%)",
+    heroShadow: "rgba(124,58,237,.7)", cta: "linear-gradient(95deg,#8B5CF6,#DB2777)",
+    icon: "linear-gradient(135deg,#DDD6FE,#8B5CF6)", accent: "#7C3AED", swatch: "#8B5CF6" },
+};
+
+/* ============================ helpers ============================ */
+const uid = () => Math.random().toString(36).slice(2, 9);
+const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const isoOf = (dt) => iso(dt.getFullYear(), dt.getMonth(), dt.getDate());
+const pad = (n) => String(n).padStart(2, "0");
+
+function fmtHMS(ms) {
+  if (ms < 0) ms = 0;
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+const timeLabel = (ts) => new Date(ts).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+function calcStreak(dates) {
+  const set = new Set(dates || []);
+  let n = 0; const d = new Date();
+  if (!set.has(isoOf(d))) d.setDate(d.getDate() - 1);
+  while (set.has(isoOf(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+function wxInfo(code) {
+  if (code === 0) return ["☀️", "בהיר"];
+  if (code <= 3) return ["⛅", "מעונן חלקית"];
+  if (code === 45 || code === 48) return ["🌫️", "ערפל"];
+  if (code >= 51 && code <= 67) return ["🌧️", "גשם"];
+  if (code >= 71 && code <= 77) return ["❄️", "שלג"];
+  if (code >= 80 && code <= 82) return ["🌦️", "ממטרים"];
+  if (code >= 95) return ["⛈️", "סופת רעמים"];
+  return ["🌡️", ""];
+}
+async function loadWeather(city) {
+  const g = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=he&format=json`).then((r) => r.json());
+  const loc = g.results && g.results[0];
+  if (!loc) return null;
+  const f = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weather_code&timezone=auto`).then((r) => r.json());
+  return { name: loc.name, tz: loc.timezone, temp: Math.round(f.current && f.current.temperature_2m), code: f.current && f.current.weather_code };
+}
+
+let _webpOK = null;
+function supportsWebp() {
+  if (_webpOK !== null) return _webpOK;
+  try { const c = document.createElement("canvas"); c.width = c.height = 1; _webpOK = c.toDataURL("image/webp").indexOf("data:image/webp") === 0; }
+  catch { _webpOK = false; }
+  return _webpOK;
+}
+function approxBytes(durl) { const i = durl.indexOf(","); return Math.ceil((durl.length - i - 1) * 0.75); }
+
+/* Compresses an image as small as possible while keeping it viewable on a phone.
+   Prefers WebP (much smaller), falls back to JPEG. Shrinks quality first, then
+   dimensions, until the result fits the byte budget (default ~50KB). */
+function fileToDataURL(file, opts = {}) {
+  const maxDim = opts.maxDim || 1000;
+  const budget = opts.budgetBytes || 90 * 1024;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const type = supportsWebp() ? "image/webp" : "image/jpeg";
+        const render = (dim, q) => {
+          const scale = Math.min(1, dim / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const cv = document.createElement("canvas");
+          cv.width = w; cv.height = h;
+          cv.getContext("2d").drawImage(img, 0, 0, w, h);
+          return cv.toDataURL(type, q);
+        };
+        try {
+          let best = render(maxDim, 0.7);
+          for (const q of [0.7, 0.6, 0.5, 0.42, 0.35]) {
+            best = render(maxDim, q);
+            if (approxBytes(best) <= budget) return resolve(best);
+          }
+          for (const d of [520, 460, 400, 340, 280]) {
+            best = render(d, 0.42);
+            if (approxBytes(best) <= budget) return resolve(best);
+          }
+          resolve(best);
+        } catch { resolve(e.target.result); }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function translateAuthError(e) {
+  const c = (e && e.code) || "";
+  if (c.includes("invalid-email")) return "כתובת אימייל לא תקינה";
+  if (c.includes("missing-password")) return "חסרה סיסמה";
+  if (c.includes("weak-password")) return "הסיסמה צריכה להיות לפחות 6 תווים";
+  if (c.includes("email-already-in-use")) return "המייל כבר רשום — נסו להתחבר במקום";
+  if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "אימייל או סיסמה שגויים";
+  if (c.includes("too-many-requests")) return "יותר מדי ניסיונות, נסו שוב מאוחר יותר";
+  if (c.includes("network")) return "אין חיבור לאינטרנט";
+  return "שגיאה: " + ((e && e.message) || c || "לא ידוע");
+}
+
+/* ============================ seed + normalize ============================ */
+function buildSeed() {
+  const now = Date.now();
+  const t = new Date();
+  const y = t.getFullYear(), m = t.getMonth();
+  const today = isoOf(t);
+  const act = [];
+  for (let i = 0; i < 5; i++) { const dd = new Date(); dd.setDate(dd.getDate() - i); act.push(isoOf(dd)); }
+  return {
+    names: { a: "אסף", b: "ליאל" },
+    theme: "sunset",
+    longDistance: false,
+    people: { a: { city: "" }, b: { city: "" } },
+    anniversary: new Date(now - 580 * 864e5).toISOString(),
+    moods: { a: { date: today, emoji: "😊" }, b: { date: today, emoji: "🥰" } },
+    activityDates: act,
+    countdowns: [
+      { id: uid(), title: "מתגייסת", emoji: "😍", setBy: "b", date: new Date(now + 32 * 864e5 + 13 * 36e5 + 28 * 6e4).toISOString() },
+      { id: uid(), title: "טיול ליוון", emoji: "✈️", setBy: "a", date: new Date(now + 95 * 864e5).toISOString() },
+      { id: uid(), title: "יום השנה שלנו", emoji: "❤️", setBy: "b", date: new Date(now + 180 * 864e5).toISOString() },
+    ],
+    letters: [
+      { id: uid(), from: "a", keepsake: true, durationHours: 24, createdAt: now - 3 * 864e5, reaction: "🥰",
+        text: "השנה הזאת איתך היתה הכי טובה בחיי שלי. תודה שאת מי שאת 🤍", photo: null },
+      { id: uid(), from: "a", keepsake: false, durationHours: 24, createdAt: now - 34 * 6e4, reaction: "🥰",
+        text: "בוקר טוב יפה שלי 🥰 אני מתרגש כי היום אני מסיים את המשמרת מוקדם — נצא לקפה ביחד? אוהב אותך הכי בעולם.", photo: null },
+      { id: uid(), from: "b", keepsake: false, durationHours: 24, createdAt: now - 6 * 6e4, reaction: "❤️",
+        text: "היי מאמי מה קורהה 🤗 אני עוד מעט מסיימת לעבוד ואני שמחה שחזרת מוקדם ככה נוכל להיות ביחד כבר היום 🤗🤗", photo: null },
+    ],
+    reminders: [
+      { id: uid(), text: "להגיד לילה טוב 🌙", at: new Date(now + 3 * 36e5).toISOString(), fired: false },
+    ],
+    events: [
+      { id: uid(), date: iso(y, m, 1),  title: "אימון בוקר", cat: "fun"  },
+      { id: uid(), date: iso(y, m, 1),  title: "כנרת",        cat: "work" },
+      { id: uid(), date: iso(y, m, 2),  title: "מסיבה",       cat: "fun"  },
+      { id: uid(), date: iso(y, m, 4),  title: "אימון",       cat: "fun"  },
+      { id: uid(), date: iso(y, m, 4),  title: "ליאל 🎂",     cat: "love" },
+      { id: uid(), date: iso(y, m, 7),  title: "ערב יחד",     cat: "fun"  },
+      { id: uid(), date: iso(y, m, 8),  title: "עובד",        cat: "work" },
+      { id: uid(), date: iso(y, m, 9),  title: "תספורת",      cat: "personal" },
+      { id: uid(), date: iso(y, m, 11), title: "עם אמא",      cat: "fun"  },
+      { id: uid(), date: iso(y, m, 12), title: "מסיבה",       cat: "fun"  },
+    ],
+    dreams: [
+      { id: uid(), text: "טיול ליפן 🇯🇵", done: false },
+      { id: uid(), text: "לאמץ כלב 🐶", done: false },
+      { id: uid(), text: "דירה עם מרפסת גדולה", done: false },
+      { id: uid(), text: "קעקוע תואם", done: false },
+      { id: uid(), text: "סופ״ש בצימר בצפון", done: false },
+      { id: uid(), text: "לרוץ חצי מרתון ביחד", done: false },
+    ],
+  };
+}
+
+function normalize(d) {
+  const s = buildSeed();
+  if (!d || typeof d !== "object") return s;
+  const out = { ...s, ...d };
+  out.names = { ...s.names, ...(d.names || {}) };
+  out.people = { a: { ...(d.people && d.people.a) }, b: { ...(d.people && d.people.b) } };
+  out.moods = d.moods || s.moods;
+  out.reminders = d.reminders || [];
+  out.dreams = d.dreams || [];
+  out.events = d.events || [];
+  out.letters = (d.letters || []).map((l) => ({ reaction: null, ...l }));
+  out.activityDates = d.activityDates || [];
+  out.theme = THEMES[d.theme] ? d.theme : "sunset";
+  out.longDistance = !!d.longDistance;
+  if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
+  else out.countdowns = d.countdowns;
+  return out;
+}
+
+/* ============================ atoms ============================ */
+function Card({ children, className = "", style = {}, ...rest }) {
+  return (
+    <div className={`rounded-3xl ${className}`}
+      style={{ background: C.card, border: `1px solid ${C.line}`, boxShadow: "0 14px 34px -20px rgba(200,90,130,.30)", ...style }} {...rest}>
+      {children}
+    </div>
+  );
+}
+function RoundBtn({ children, onClick, disabled, className = "", style = {} }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`grid place-items-center rounded-full transition active:scale-95 ${className}`} style={style}>
+      {children}
+    </button>
+  );
+}
+function Modal({ children, onClose, accent = "#EC4899" }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-3"
+      style={{ background: "rgba(40,20,30,.40)", backdropFilter: "blur(5px)", fontFamily: BODY }} onClick={onClose} dir="rtl">
+      <div className="w-full overflow-y-auto rounded-3xl bg-white"
+        style={{ maxWidth: 430, maxHeight: "90vh", boxShadow: "0 26px 64px -20px rgba(150,40,80,.55)", border: `2px solid ${accent}22` }}
+        onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+const Label = ({ children }) => (<div className="font-semibold mb-1.5" style={{ fontSize: 13, color: C.muted }}>{children}</div>);
+const inputCls = "w-full rounded-2xl px-4 py-3 outline-none transition";
+const inputStyle = { fontSize: 15, background: C.soft, border: "1.5px solid #F0DCE4", color: C.ink };
+const closeBtnStyle = { background: "#F4EEF1" };
+
+function Section({ icon, iconBg, title, badge, badgeColor, headerBg, open, onToggle, children }) {
+  return (
+    <Card className="fade-up overflow-hidden">
+      <button onClick={onToggle} className="w-full p-3.5 flex items-center gap-3" style={{ background: headerBg || "#fff" }}>
+        <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 42, height: 42, background: iconBg || C.soft }}>{icon}</div>
+        <div className="flex-1 text-center"><div className="font-extrabold" style={{ fontSize: 17, color: C.ink }}>{title}</div></div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {badge != null && (
+            <span className="flex items-center gap-1 rounded-full px-2.5 py-1 bg-white" style={{ border: `1px solid ${C.line}` }}>
+              <span className="rounded-full" style={{ width: 7, height: 7, background: badgeColor || "#60A5FA" }} />
+              <span className="font-bold" style={{ fontSize: 11, color: badgeColor || "#3B82F6" }}>{badge}</span>
+            </span>
+          )}
+          <ChevronLeft style={{ width: 18, height: 18, color: C.muted, transform: open ? "rotate(-90deg)" : "none", transition: "transform .2s" }} />
+        </div>
+      </button>
+      {open && <div className="p-3 pt-0 space-y-2">{children}</div>}
+    </Card>
+  );
+}
+
+function ListRow({ text, done, onToggle, onDelete, doneColor = "#22C55E" }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: C.soft }}>
+      <button onClick={onToggle} className="rounded-full grid place-items-center shrink-0 transition"
+        style={done ? { width: 24, height: 24, background: doneColor } : { width: 24, height: 24, border: "2px solid #D6C2CC" }}>
+        {done && <Check style={{ width: 16, height: 16, color: "#fff" }} />}
+      </button>
+      <span className={`flex-1 ${done ? "line-through" : ""}`} style={{ fontSize: 14, color: done ? C.muted : C.ink }}>{text}</span>
+      <button onClick={onDelete} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+    </div>
+  );
+}
+function AddRow({ value, onChange, onAdd, placeholder, grad }) {
+  return (
+    <div className="flex gap-2">
+      <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onAdd()} placeholder={placeholder} className={inputCls} style={inputStyle} />
+      <RoundBtn onClick={onAdd} className="shrink-0 text-white" style={{ width: 48, background: grad }}><Plus style={{ width: 20, height: 20 }} /></RoundBtn>
+    </div>
+  );
+}
+
+/* ============================ forms ============================ */
+function WriteLetterForm({ from, names, onSave, onClose }) {
+  const [text, setText] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [dur, setDur] = useState(24);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const fileRef = useRef(null);
+  const accent = from === "b" ? "#EC4899" : "#3B82F6";
+  async function pick(e) { const f = e.target.files && e.target.files[0]; if (!f) return; setBusy(true); setErr(""); try { setPhoto(await fileToDataURL(f)); } catch { setErr("לא הצלחנו לטעון את התמונה"); } finally { setBusy(false); } }
+  function submit() {
+    if (!text.trim()) return;
+    onSave({ id: uid(), from, text: text.trim(), photo, createdAt: Date.now(), durationHours: dur === 0 ? 1e6 : dur, keepsake: dur === 0, reaction: null });
+  }
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Heart style={{ width: 20, height: 20, fill: accent, color: accent }} />
+          <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>מכתב חדש מ{names[from]}</span>
+        </div>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>מה רצית להגיד? 💌</Label>
+      <textarea autoFocus rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="כתבו משהו מתוק…" className={inputCls + " resize-none mb-4 leading-relaxed"} style={inputStyle} />
+      <Label>תמונה (לא חובה)</Label>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pick} />
+      {photo ? (
+        <div className="relative mb-4">
+          <img src={photo} alt="" className="w-full rounded-2xl object-cover" style={{ maxHeight: 240 }} />
+          <RoundBtn onClick={() => setPhoto(null)} className="w-8 h-8 absolute top-2 left-2" style={{ background: "rgba(0,0,0,.5)" }}><X style={{ width: 16, height: 16, color: "#fff" }} /></RoundBtn>
+        </div>
+      ) : (
+        <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full mb-4 rounded-2xl py-4 grid place-items-center gap-1 transition active:scale-95" style={{ border: "1.5px dashed #E7C6D2", background: "#FBF4F7", color: accent }}>
+          <ImagePlus style={{ width: 24, height: 24 }} />
+          <span className="font-semibold" style={{ fontSize: 13 }}>{busy ? "טוען…" : "הוספת תמונה"}</span>
+        </button>
+      )}
+      <Label>נעלם אחרי</Label>
+      <div className="grid grid-cols-4 gap-2 mb-5">
+        {[{ v: 12, l: "12 שעות" }, { v: 24, l: "24 שעות" }, { v: 48, l: "יומיים" }, { v: 0, l: "לתמיד" }].map((o) => (
+          <button key={o.v} onClick={() => setDur(o.v)} className="rounded-xl py-2.5 font-bold transition active:scale-95"
+            style={dur === o.v ? { fontSize: 12.5, background: accent, color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.muted }}>{o.l}</button>
+        ))}
+      </div>
+      {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
+      <button disabled={!text.trim()} onClick={submit}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>שליחת המכתב 💗</button>
+    </div>
+  );
+}
+
+function EventForm({ presetDate, onSave, onClose }) {
+  const [title, setTitle] = useState("");
+  const [cat, setCat] = useState("fun");
+  const [date, setDate] = useState(presetDate);
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>אירוע חדש 🗓️</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>מה קורה?</Label>
+      <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="לדוגמה: ארוחת ערב בחוץ" className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>תאריך</Label>
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>סוג</Label>
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        {Object.entries(CATS).map(([k, c]) => (
+          <button key={k} onClick={() => setCat(k)} className="flex items-center gap-2 rounded-2xl px-3 py-3 font-bold transition active:scale-95"
+            style={cat === k ? { fontSize: 13.5, background: c.bg, color: "#fff" } : { fontSize: 13.5, background: "#F6EEF2", color: C.ink }}>
+            <span className="rounded-full" style={{ width: 12, height: 12, background: cat === k ? "#fff" : c.bg }} />{c.label}
+          </button>
+        ))}
+      </div>
+      <button disabled={!title.trim()} onClick={() => onSave({ id: uid(), date, title: title.trim(), cat })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#7C3AED,#3B6BFF)" }}>הוספה ללוח</button>
+    </div>
+  );
+}
+
+function CountdownForm({ current, names, defaultBy, onSave, onDelete, onClose }) {
+  const editing = !!(current && current.id);
+  const [title, setTitle] = useState((current && current.title) || "");
+  const [emoji, setEmoji] = useState((current && current.emoji) || "😍");
+  const [setBy, setSetBy] = useState((current && current.setBy) || defaultBy);
+  const init = current && current.date ? new Date(current.date) : new Date(Date.now() + 7 * 864e5);
+  const [dt, setDt] = useState(`${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}T${pad(init.getHours())}:${pad(init.getMinutes())}`);
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>{editing ? "עריכת ספירה ⏳" : "ספירה חדשה 🎉"}</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <div className="flex gap-2 mb-4">
+        <div className="flex-1"><Label>האירוע</Label>
+          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="טיול / יום נישואין…" className={inputCls} style={inputStyle} /></div>
+        <div style={{ width: 80 }}><Label>אימוג׳י</Label>
+          <input value={emoji} onChange={(e) => setEmoji(e.target.value)} className={inputCls + " text-center"} style={{ ...inputStyle, fontSize: 22 }} /></div>
+      </div>
+      <Label>מתי?</Label>
+      <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>נקבע ע״י</Label>
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        {["a", "b"].map((p) => (
+          <button key={p} onClick={() => setSetBy(p)} className="rounded-2xl py-3 font-bold transition active:scale-95"
+            style={setBy === p ? { fontSize: 14, background: p === "b" ? "#EC4899" : "#3B82F6", color: "#fff" } : { fontSize: 14, background: "#F6EEF2", color: C.ink }}>{names[p]}</button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        {editing && (
+          <RoundBtn onClick={() => onDelete(current.id)} className="shrink-0" style={{ width: 56, height: 56, background: "#FDECEC" }}><Trash2 style={{ width: 20, height: 20, color: "#EF4444" }} /></RoundBtn>
+        )}
+        <button disabled={!title.trim()} onClick={() => onSave({ id: current && current.id, title: title.trim(), emoji: emoji || "✨", setBy, date: new Date(dt).toISOString() })}
+          className="flex-1 rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#FB923C,#EF4444)" }}>שמירה</button>
+      </div>
+    </div>
+  );
+}
+
+function ReminderForm({ onSave, onClose }) {
+  const [text, setText] = useState("");
+  const init = new Date(Date.now() + 36e5);
+  const [dt, setDt] = useState(`${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}T${pad(init.getHours())}:${pad(init.getMinutes())}`);
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>תזכורת חדשה 🔔</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>על מה להזכיר?</Label>
+      <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="לדוגמה: להתקשר לאמא 💛" className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>מתי?</Label>
+      <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-5"} style={inputStyle} />
+      <button disabled={!text.trim()} onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת</button>
+    </div>
+  );
+}
+
+function SettingsForm({ names, anniversary, theme, longDistance, people, email, onResetPassword, onSave, onClose }) {
+  const [a, setA] = useState(names.a);
+  const [b, setB] = useState(names.b);
+  const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
+  const [th, setTh] = useState(theme);
+  const [ld, setLd] = useState(longDistance);
+  const [cityA, setCityA] = useState((people && people.a && people.a.city) || "");
+  const [cityB, setCityB] = useState((people && people.b && people.b.city) || "");
+  const [pwMsg, setPwMsg] = useState("");
+  async function resetPw() { setPwMsg("שולח…"); const ok = await onResetPassword(); setPwMsg(ok ? "נשלח מייל לאיפוס הסיסמה — בדקו את תיבת הדואר" : "שגיאה בשליחה, נסו שוב"); }
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>ההגדרות שלנו ⚙️</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>השמות שלנו</Label>
+      <div className="flex gap-2 mb-4">
+        <input value={a} onChange={(e) => setA(e.target.value)} className={inputCls} style={inputStyle} />
+        <input value={b} onChange={(e) => setB(e.target.value)} className={inputCls} style={inputStyle} />
+      </div>
+      <Label>מתי התחלנו להיות יחד? ❤️</Label>
+      <input type="date" value={ann} onChange={(e) => setAnn(e.target.value)} className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>ערכת צבעים 🎨</Label>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {Object.entries(THEMES).map(([k, t]) => (
+          <button key={k} onClick={() => setTh(k)} className="flex items-center gap-2 rounded-2xl px-3 py-3 font-bold transition active:scale-95"
+            style={th === k ? { fontSize: 14, background: t.swatch, color: "#fff" } : { fontSize: 14, background: "#F6EEF2", color: C.ink }}>
+            <span className="rounded-full" style={{ width: 14, height: 14, background: th === k ? "#fff" : t.swatch }} />{t.name}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setLd((v) => !v)} className="w-full flex items-center justify-between rounded-2xl px-4 py-3 mb-3" style={{ background: C.soft }}>
+        <div className="flex items-center gap-2"><Globe style={{ width: 18, height: 18, color: "#3B82F6" }} /><span className="font-bold" style={{ fontSize: 14, color: C.ink }}>מצב מרחק (שעון ומזג אוויר)</span></div>
+        <span className="rounded-full transition" style={{ width: 44, height: 26, background: ld ? "#22C55E" : "#D6C2CC", position: "relative" }}>
+          <span className="rounded-full" style={{ position: "absolute", top: 3, right: ld ? 3 : 21, width: 20, height: 20, background: "#fff", transition: "right .2s" }} />
+        </span>
+      </button>
+      {ld && (
+        <div className="flex gap-2 mb-5">
+          <div className="flex-1"><Label>העיר של {a || "ראשון"}</Label><input value={cityA} onChange={(e) => setCityA(e.target.value)} placeholder="תל אביב" className={inputCls} style={inputStyle} /></div>
+          <div className="flex-1"><Label>העיר של {b || "שני"}</Label><input value={cityB} onChange={(e) => setCityB(e.target.value)} placeholder="ברלין" className={inputCls} style={inputStyle} /></div>
+        </div>
+      )}
+      <button onClick={() => onSave({ names: { a: a.trim() || "אני", b: b.trim() || "את/ה" }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } } })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירה</button>
+
+      <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${C.line}` }}>
+        <Label>החשבון</Label>
+        {email && <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8, direction: "ltr", textAlign: "right" }}>{email}</div>}
+        <button onClick={resetPw} className="w-full rounded-2xl py-3 font-bold transition active:scale-95" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>שינוי סיסמה (שליחת מייל איפוס)</button>
+        {pwMsg && <div className="text-center mt-2" style={{ fontSize: 12.5, color: "#16A34A" }}>{pwMsg}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================ feature cards ============================ */
+function MoodCard({ names, moodA, moodB, open, onOpen, onPick }) {
+  const half = (p, emoji) => {
+    const c = p === "b" ? "#EC4899" : "#3B82F6";
+    return (
+      <button onClick={() => onOpen(p)} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition active:scale-95" style={{ background: open === p ? `${c}12` : "transparent" }}>
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: c }}><Heart style={{ width: 10, height: 10, fill: "#fff", color: "#fff" }} /></span>
+          <span className="font-bold" style={{ fontSize: 13, color: C.ink }}>{names[p]}</span>
+        </div>
+        <span style={{ fontSize: emoji ? 34 : 24, lineHeight: 1 }}>{emoji || "➕"}</span>
+        <span style={{ fontSize: 10, color: C.muted }}>{emoji ? "היום" : "הוספת מצב רוח"}</span>
+      </button>
+    );
+  };
+  return (
+    <Card className="fade-up p-3" style={{ animationDelay: ".14s" }}>
+      <div className="text-center font-extrabold mb-1" style={{ fontSize: 14, color: C.ink }}>איך אנחנו מרגישים היום?</div>
+      <div className="flex items-stretch">
+        {half("a", moodA)}<div style={{ width: 1, background: C.line, margin: "8px 4px" }} />{half("b", moodB)}
+      </div>
+      {open && (
+        <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
+          {MOOD_EMOJIS.map((e) => (<button key={e} onClick={() => onPick(open, e)} className="shrink-0 rounded-2xl transition active:scale-90" style={{ fontSize: 24, width: 42, height: 42, background: C.soft }}>{e}</button>))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClose }) {
+  const accent = letter.from === "b" ? "#EC4899" : "#3B82F6";
+  const remaining = letter.createdAt + letter.durationHours * 3600000 - now;
+  const cardRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const dateStr = new Date(letter.createdAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" });
+  async function saveImage() {
+    if (saving || !window.html2canvas || !cardRef.current) return;
+    setSaving(true);
+    try {
+      const canvas = await window.html2canvas(cardRef.current, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+      if (!blob) throw new Error("no blob");
+      const fname = "מכתב-" + dateStr.replace(/[/\s]/g, "-") + ".png";
+      const file = new File([blob], fname, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: "מכתב 💌" }); setSaving(false); return; }
+        catch (e) { if (e && e.name === "AbortError") { setSaving(false); return; } }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) { console.error("save image failed", e); }
+    finally { setSaving(false); }
+  }
+  return (
+    <Modal onClose={onClose} accent={accent}>
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2"><Heart style={{ width: 22, height: 22, fill: accent, color: accent }} /><span style={{ fontFamily: SCRIPT, fontSize: 24, color: C.ink }}>מאת: {names[letter.from]}</span></div>
+          <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+        </div>
+        {letter.photo && <img src={letter.photo} alt="" className="w-full rounded-2xl object-cover mb-4" style={{ maxHeight: 360 }} />}
+        <p className="whitespace-pre-wrap mb-4" style={{ fontSize: 16.5, color: C.ink, lineHeight: 1.75 }}>{letter.text}</p>
+        <div className="flex items-center justify-center gap-1.5 mb-4" style={{ fontSize: 12.5, color: C.muted }}>
+          <Calendar style={{ width: 14, height: 14 }} /><span style={{ fontFamily: SCRIPT, fontSize: 14 }}>נוצר ביומן הזוגי של {names.a} ו{names.b} ❤️</span>
+        </div>
+        <div className="flex items-center justify-center gap-1.5 mb-4">
+          {REACTIONS.map((e) => (<button key={e} onClick={() => onReact(e)} className="rounded-full transition active:scale-90"
+            style={{ fontSize: 20, width: 38, height: 38, background: letter.reaction === e ? `${accent}22` : C.soft, border: letter.reaction === e ? `1.5px solid ${accent}` : "1.5px solid transparent" }}>{e}</button>))}
+        </div>
+        <button onClick={saveImage} disabled={saving} className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50 mb-3" style={{ fontSize: 14.5, background: `${accent}14`, color: accent, border: `1.5px solid ${accent}33` }}>
+          <ImageIcon style={{ width: 18, height: 18 }} />{saving ? "מכין תמונה…" : "שמירת המכתב כתמונה לגלריה"}
+        </button>
+        <div className="flex items-center justify-between gap-2">
+          <RoundBtn onClick={onDelete} className="w-11 h-11" style={{ background: "#FDECEC" }}><Trash2 style={{ width: 20, height: 20, color: "#EF4444" }} /></RoundBtn>
+          <button onClick={onKeepsake} disabled={letter.keepsake} className="flex items-center gap-2 rounded-2xl px-4 py-3 font-bold transition active:scale-95"
+            style={letter.keepsake ? { fontSize: 14, background: "#EAF7EE", color: "#16A34A" } : { fontSize: 14, background: "#EAF1FF", color: "#2563EB" }}>
+            {letter.keepsake ? <Check style={{ width: 16, height: 16 }} /> : <Camera style={{ width: 16, height: 16 }} />}{letter.keepsake ? "נשמר כמזכרת" : "שמור כמזכרת"}
+          </button>
+          <div className="flex items-center gap-1.5 rounded-2xl px-3 py-2.5" style={{ background: "#F6EEF2" }}>
+            <Clock style={{ width: 16, height: 16, color: C.muted }} /><span className="font-bold tabular-nums" style={{ fontSize: 12.5, color: letter.keepsake ? "#16A34A" : C.ink }}>{letter.keepsake ? "לתמיד" : `נותרו: ${fmtHMS(remaining)}`}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* hidden card rendered to an image when saving */}
+      <div ref={cardRef} dir="rtl" aria-hidden="true" style={{ position: "fixed", left: -99999, top: 0, width: 380, fontFamily: BODY, padding: 22, background: "linear-gradient(160deg,#FFE3D3 0%,#FBD7E4 100%)" }}>
+        <div style={{ background: "#fff", borderRadius: 26, padding: 26, borderTop: `6px solid ${accent}`, boxShadow: "0 18px 40px -20px rgba(150,40,80,.5)" }}>
+          <div style={{ textAlign: "center", fontFamily: SCRIPT, fontSize: 30, color: accent, lineHeight: 1.1 }}>מאת {names[letter.from]} 💌</div>
+          <div style={{ textAlign: "center", fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 18 }}>{dateStr}</div>
+          {letter.photo && <img src={letter.photo} alt="" style={{ width: "100%", borderRadius: 18, marginBottom: 18, display: "block" }} />}
+          <div style={{ whiteSpace: "pre-wrap", fontSize: 18, color: C.ink, lineHeight: 1.8, textAlign: "center" }}>{letter.text}</div>
+          {letter.reaction && <div style={{ textAlign: "center", fontSize: 30, marginTop: 16 }}>{letter.reaction}</div>}
+          <div style={{ textAlign: "center", marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.line}`, fontFamily: SCRIPT, fontSize: 17, color: "#C58AA0" }}>היומן של {names.a} ו{names.b} ❤️</div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function LongDistanceCard({ people, names, now }) {
+  const [info, setInfo] = useState({ a: null, b: null });
+  const cacheRef = useRef({});
+  useEffect(() => {
+    let off = false;
+    ["a", "b"].forEach(async (p) => {
+      const city = people && people[p] && people[p].city && people[p].city.trim();
+      if (!city) { setInfo((s) => ({ ...s, [p]: null })); return; }
+      if (cacheRef.current[city]) { setInfo((s) => ({ ...s, [p]: cacheRef.current[city] })); return; }
+      try { const w = await loadWeather(city); if (w) { cacheRef.current[city] = w; if (!off) setInfo((s) => ({ ...s, [p]: w })); } } catch {}
+    });
+    return () => { off = true; };
+  }, [people && people.a && people.a.city, people && people.b && people.b.city]);
+  const half = (p) => {
+    const c = p === "b" ? "#EC4899" : "#3B82F6"; const w = info[p];
+    const time = w && w.tz ? new Date(now).toLocaleTimeString("he-IL", { timeZone: w.tz, hour: "2-digit", minute: "2-digit" }) : "—";
+    const wx = w && w.code != null ? wxInfo(w.code) : null;
+    return (
+      <div className="flex-1 flex flex-col items-center gap-0.5 py-1">
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: c }}><Heart style={{ width: 10, height: 10, fill: "#fff", color: "#fff" }} /></span>
+          <span className="font-bold" style={{ fontSize: 13, color: C.ink }}>{names[p]}</span>
+        </div>
+        <div className="font-black tabular-nums" style={{ fontSize: 26, color: C.ink }}>{time}</div>
+        <div style={{ fontSize: 12, color: C.muted }}>{w ? `${w.name}${wx ? ` · ${wx[0]} ${w.temp}°` : ""}` : (people && people[p] && people[p].city ? "טוען…" : "לא הוגדרה עיר")}</div>
+      </div>
+    );
+  };
+  return (
+    <Card className="fade-up p-3" style={{ animationDelay: ".15s" }}>
+      <div className="flex items-center justify-center gap-1.5 mb-1"><Globe style={{ width: 16, height: 16, color: "#3B82F6" }} /><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>גם כשרחוקים, אותו שמיים</span></div>
+      <div className="flex items-stretch">{half("a")}<div style={{ width: 1, background: C.line, margin: "6px 4px" }} />{half("b")}</div>
+    </Card>
+  );
+}
+
+/* ============================ splash + login ============================ */
+function Splash({ text }) {
+  return (
+    <div dir="rtl" style={{ minHeight: "100vh", background: THEMES.sunset.bg, fontFamily: BODY, display: "grid", placeItems: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <div className="floaty-css" style={{ fontSize: 56, marginBottom: 12 }}>❤️</div>
+        <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink }}>{text || "טוען…"}</div>
+      </div>
+      <style>{`@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.floaty-css{animation:fl 1.6s ease-in-out infinite}`}</style>
+    </div>
+  );
+}
+
+function LoginScreen({ onSignIn, onSignUp, busy, error }) {
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const T = THEMES.sunset;
+  return (
+    <div dir="rtl" style={{ minHeight: "100vh", background: T.bg, fontFamily: BODY, display: "grid", placeItems: "center", padding: 16, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", bottom: -110, left: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+      <div className="rounded-3xl" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 380, background: "#fff", border: `1px solid ${C.line}`, boxShadow: "0 26px 64px -24px rgba(150,40,80,.45)", padding: 26 }}>
+        <div style={{ textAlign: "center", marginBottom: 18 }}>
+          <div className="grid place-items-center rounded-2xl" style={{ width: 60, height: 60, margin: "0 auto 12px", background: T.icon, boxShadow: `0 10px 22px -8px ${T.swatch}` }}>
+            <Heart style={{ width: 30, height: 30, fill: "#fff", color: "#fff" }} />
+          </div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 30, color: C.ink, lineHeight: 1.1 }}>היומן שלנו ❤️</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>התחברו עם המייל והסיסמה המשותפים שלכם</div>
+        </div>
+        <Label>אימייל</Label>
+        <input type="email" autoCapitalize="none" autoCorrect="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" className={inputCls + " mb-3"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
+        <Label>סיסמה</Label>
+        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onSignIn(email.trim(), pw)} placeholder="לפחות 6 תווים" className={inputCls + " mb-4"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
+        {error && <div className="rounded-2xl px-4 py-3 mb-4 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{error}</div>}
+        <button disabled={busy} onClick={() => onSignIn(email.trim(), pw)} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={{ fontSize: 16, background: T.cta }}>
+          {busy ? "מתחבר…" : "התחברות"}
+        </button>
+        <button disabled={busy} onClick={() => onSignUp(email.trim(), pw)} className="w-full rounded-3xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>
+          יצירת חשבון חדש (פעם ראשונה)
+        </button>
+        <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 14, lineHeight: 1.6 }}>
+          טיפ: צרו חשבון אחד משותף לשניכם — כך תראו את אותו יומן בשני המכשירים 💕
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VerifyScreen({ email, busy, msg, onResend, onCheck, onSignOut }) {
+  const T = THEMES.sunset;
+  return (
+    <div dir="rtl" style={{ minHeight: "100vh", background: T.bg, fontFamily: BODY, display: "grid", placeItems: "center", padding: 16, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", bottom: -110, left: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+      <div className="rounded-3xl" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 380, background: "#fff", border: `1px solid ${C.line}`, boxShadow: "0 26px 64px -24px rgba(150,40,80,.45)", padding: 26 }}>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div className="grid place-items-center rounded-2xl" style={{ width: 60, height: 60, margin: "0 auto 12px", background: T.icon, boxShadow: `0 10px 22px -8px ${T.swatch}` }}>
+            <Bell style={{ width: 28, height: 28, color: "#fff" }} />
+          </div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink, lineHeight: 1.1 }}>אימות אימייל ✉️</div>
+          <div style={{ fontSize: 13.5, color: C.muted, marginTop: 8, lineHeight: 1.6 }}>
+            שלחנו קישור אימות אל{email ? <><br /><span style={{ color: C.ink, fontWeight: 700, direction: "ltr", display: "inline-block" }}>{email}</span></> : " המייל שלכם"}.<br />
+            לחצו על הקישור במייל, ואז חזרו לכאן והקישו "כבר אישרתי".
+          </div>
+        </div>
+        {msg && <div className="rounded-2xl px-4 py-3 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FFF6E6", color: "#B45309" }}>{msg}</div>}
+        <button disabled={busy} onClick={onCheck} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={{ fontSize: 16, background: T.cta }}>
+          {busy ? "בודק…" : "כבר אישרתי — המשך"}
+        </button>
+        <button disabled={busy} onClick={onResend} className="w-full rounded-3xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50 mb-2" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>
+          שליחת המייל שוב
+        </button>
+        <button onClick={onSignOut} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 13, background: "transparent", color: "#EF4444" }}>
+          התחברות עם חשבון אחר
+        </button>
+        <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
+          לא מוצאים את המייל? בדקו בתיקיית הספאם / קידומי מכירות.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================ app ============================ */
+function App() {
+  const [fb, setFb] = useState(typeof window !== "undefined" ? (window.__fb || null) : null);
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authErr, setAuthErr] = useState("");
+  const [fbError, setFbError] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState("");
+
+  const [data, setData] = useState(null);
+  const lastSavedRef = useRef("");
+  const saveTimerRef = useRef(null);
+  const seenLettersRef = useRef(null);
+  const localLettersRef = useRef(new Set());
+
+  const [now, setNow] = useState(Date.now());
+  const [me, setMe] = useState("b");
+  const [modal, setModal] = useState(null);
+  const [cdTarget, setCdTarget] = useState(null);
+  const [openLetter, setOpenLetter] = useState(null);
+  const [moodPickerFor, setMoodPickerFor] = useState(null);
+  const [alertMsg, setAlertMsg] = useState(null);
+  const [open, setOpen] = useState({ dreams: false, keepsakes: false, reminders: false });
+  const [dreamTxt, setDreamTxt] = useState("");
+  const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+
+  const td = new Date();
+  const todayISO = isoOf(td);
+  const [selectedDate, setSelectedDate] = useState(todayISO);
+  const [cal, setCal] = useState({ y: td.getFullYear(), m: td.getMonth() });
+
+  // tick clock
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  // wait for firebase module to be ready
+  useEffect(() => {
+    if (fb) return;
+    const onReady = () => setFb(window.__fb);
+    window.addEventListener("fb-ready", onReady);
+    if (window.__fb) setFb(window.__fb);
+    const to = setTimeout(() => { if (!window.__fb) setFbError(true); }, 12000);
+    return () => { window.removeEventListener("fb-ready", onReady); clearTimeout(to); };
+  }, [fb]);
+
+  // auth state
+  useEffect(() => {
+    if (!fb) return;
+    const unsub = fb.onAuthStateChanged(fb.auth, (u) => { setUser(u); setVerified(!!(u && u.emailVerified)); setAuthReady(true); });
+    return () => unsub();
+  }, [fb]);
+
+  // live load from Firestore (and seed on first login)
+  useEffect(() => {
+    if (!fb || !user || !verified) { setData(null); return; }
+    const ref = fb.doc(fb.db, "users", user.uid);
+    const unsub = fb.onSnapshot(ref, async (snap) => {
+      if (snap.exists() && snap.data() && snap.data().letters) {
+        const norm = normalize(snap.data());
+        lastSavedRef.current = JSON.stringify(norm);
+        setData(norm);
+      } else {
+        const s = buildSeed();
+        lastSavedRef.current = JSON.stringify(s);
+        setData(s);
+        try { await fb.setDoc(ref, s); } catch (e) { console.error("seed save failed", e); }
+      }
+    }, (err) => { console.error("snapshot error", err); });
+    return () => unsub();
+  }, [fb, user, verified]);
+
+  // save to Firestore (debounced, skips echo from snapshot)
+  useEffect(() => {
+    if (!fb || !user || !data) return;
+    const j = JSON.stringify(data);
+    if (j === lastSavedRef.current) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      lastSavedRef.current = j;
+      fb.setDoc(fb.doc(fb.db, "users", user.uid), JSON.parse(j)).catch((e) => console.error("save failed", e));
+    }, 400);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [data, fb, user]);
+
+  // fire due reminders (best effort, while app is open)
+  useEffect(() => {
+    if (!data || !data.reminders || !data.reminders.length) return;
+    const nowMs = Date.now();
+    const due = data.reminders.filter((r) => !r.fired && new Date(r.at).getTime() <= nowMs);
+    if (!due.length) return;
+    setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
+    due.forEach((r) => {
+      if (nowMs - new Date(r.at).getTime() < 120000) {
+        const msg = "תזכורת: " + r.text;
+        setAlertMsg(msg);
+        setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 6000);
+        try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("תזכורת ❤️", { body: r.text }); } catch {}
+      }
+    });
+  }, [now]);
+
+  // notify when a new letter arrives from the other device (works while app is open / in background)
+  useEffect(() => {
+    if (!data) return;
+    const ids = data.letters.map((l) => l.id);
+    if (seenLettersRef.current === null) {
+      // first load: remember existing letters, don't notify, ask for permission once
+      seenLettersRef.current = new Set(ids);
+      try { if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {}
+      return;
+    }
+    const fresh = data.letters.filter((l) => !seenLettersRef.current.has(l.id));
+    fresh.forEach((l) => {
+      seenLettersRef.current.add(l.id);
+      if (localLettersRef.current.has(l.id)) return; // our own letter — don't notify ourselves
+      const name = data.names[l.from] || "";
+      const msg = "💌 מכתב חדש מ" + name;
+      setAlertMsg(msg);
+      setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 7000);
+      try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification(msg, { body: l.text ? l.text.slice(0, 90) : "" }); } catch {}
+    });
+  }, [data]);
+
+  /* derived (guarded for null data so hooks always run) */
+  const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake || l.createdAt + l.durationHours * 3600000 > now).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
+  const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake).sort((a, b) => b.createdAt - a.createdAt), [data]);
+  const sortedCds = useMemo(() => !data ? [] : [...data.countdowns].sort((a, b) => new Date(a.date) - new Date(b.date)), [data]);
+  const eventsByDate = useMemo(() => { const map = {}; if (data) for (const e of data.events) { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); } return map; }, [data]);
+
+  /* auth handlers */
+  async function doSignIn(email, password) {
+    setAuthErr("");
+    if (!email || !password) { setAuthErr("נא למלא אימייל וסיסמה"); return; }
+    setAuthBusy(true);
+    try { await fb.signInWithEmailAndPassword(fb.auth, email, password); }
+    catch (e) { setAuthErr(translateAuthError(e)); }
+    finally { setAuthBusy(false); }
+  }
+  async function doSignUp(email, password) {
+    setAuthErr("");
+    if (!email || !password) { setAuthErr("נא למלא אימייל וסיסמה"); return; }
+    setAuthBusy(true);
+    try {
+      const cred = await fb.createUserWithEmailAndPassword(fb.auth, email, password);
+      try { await fb.sendEmailVerification(cred.user); } catch (e) { console.error("verification email failed", e); }
+    }
+    catch (e) { setAuthErr(translateAuthError(e)); }
+    finally { setAuthBusy(false); }
+  }
+  async function doSignOut() { try { await fb.signOut(fb.auth); } catch (e) { console.error(e); } }
+  async function doResetPassword() { try { if (user && user.email) { await fb.sendPasswordResetEmail(fb.auth, user.email); return true; } return false; } catch (e) { console.error(e); return false; } }
+
+  async function resendVerification() {
+    setVerifyMsg(""); setVerifyBusy(true);
+    try {
+      if (fb.auth.currentUser) { await fb.sendEmailVerification(fb.auth.currentUser); setVerifyMsg("שלחנו מייל אימות — בדקו את תיבת הדואר (וגם ספאם)"); }
+    } catch (e) { setVerifyMsg(e && e.code && e.code.includes("too-many-requests") ? "שלחנו כבר מייל — נסו שוב בעוד כמה דקות" : "שגיאה בשליחת המייל, נסו שוב"); }
+    finally { setVerifyBusy(false); }
+  }
+  async function checkVerified() {
+    setVerifyMsg(""); setVerifyBusy(true);
+    try {
+      if (fb.auth.currentUser) {
+        await fb.auth.currentUser.reload();
+        if (fb.auth.currentUser.emailVerified) { setVerified(true); }
+        else { setVerifyMsg("עדיין לא אומת. לחצו על הקישור במייל ואז נסו שוב"); }
+      }
+    } catch (e) { setVerifyMsg("שגיאה, נסו שוב"); }
+    finally { setVerifyBusy(false); }
+  }
+
+  /* ---- gates (all hooks are above this line) ---- */
+  if (fbError) return <Splash text="אין חיבור לשרת — בדקו אינטרנט ורעננו" />;
+  if (!fb || !authReady) return <Splash text="טוען…" />;
+  if (!user) return <LoginScreen onSignIn={doSignIn} onSignUp={doSignUp} busy={authBusy} error={authErr} />;
+  if (!verified) return <VerifyScreen email={user.email} busy={verifyBusy} msg={verifyMsg} onResend={resendVerification} onCheck={checkVerified} onSignOut={doSignOut} />;
+  if (!data) return <Splash text="טוען את היומן…" />;
+
+  /* non-hook derived (only when data exists) */
+  const T = THEMES[data.theme] || THEMES.sunset;
+  const upcoming = sortedCds.filter((c) => new Date(c.date).getTime() > now);
+  const heroCd = upcoming[0] || sortedCds[sortedCds.length - 1] || null;
+  const otherCds = sortedCds.filter((c) => !heroCd || c.id !== heroCd.id);
+  const cdMs = heroCd ? Math.max(0, new Date(heroCd.date).getTime() - now) : 0;
+  const cd = { days: Math.floor(cdMs / 86400000), hours: Math.floor((cdMs % 86400000) / 3600000), minutes: Math.floor((cdMs % 3600000) / 60000), seconds: Math.floor((cdMs % 60000) / 1000), done: heroCd && cdMs <= 0 };
+  const pendingDreams = data.dreams.filter((d) => !d.done).length;
+  const daysTogether = data.anniversary ? Math.max(0, Math.floor((Date.now() - new Date(data.anniversary).getTime()) / 86400000)) : null;
+  const moodA = data.moods && data.moods.a && data.moods.a.date === todayISO ? data.moods.a.emoji : null;
+  const moodB = data.moods && data.moods.b && data.moods.b.date === todayISO ? data.moods.b.emoji : null;
+  const streak = calcStreak(data.activityDates);
+
+  const { y, m } = cal;
+  const startDow = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const selDay = Number(selectedDate.slice(8, 10));
+  const selMonthIdx = Number(selectedDate.slice(5, 7)) - 1;
+  const dayEvents = eventsByDate[selectedDate] || [];
+  const meColor = me === "b" ? "#EC4899" : "#3B82F6";
+
+  const act = (d) => (d.activityDates && d.activityDates.includes(todayISO) ? d.activityDates : [...(d.activityDates || []), todayISO]);
+
+  /* mutations */
+  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); };
+  const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
+  const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true } : l) }));
+  const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
+  const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
+  const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
+  const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
+  const delCountdown = (id) => { setData((d) => ({ ...d, countdowns: d.countdowns.filter((x) => x.id !== id) })); setModal(null); setCdTarget(null); };
+  const saveSettings = (s) => { setData((d) => ({ ...d, ...s })); setModal(null); };
+  const setMood = (p, emoji) => { setData((d) => ({ ...d, moods: { ...d.moods, [p]: { date: todayISO, emoji } }, activityDates: act(d) })); setMoodPickerFor(null); };
+  const addDream = () => { if (!dreamTxt.trim()) return; setData((d) => ({ ...d, dreams: [{ id: uid(), text: dreamTxt.trim(), done: false }, ...d.dreams] })); setDreamTxt(""); };
+  const toggleDream = (id) => setData((d) => ({ ...d, dreams: d.dreams.map((x) => x.id === id ? { ...x, done: !x.done } : x) }));
+  const delDream = (id) => setData((d) => ({ ...d, dreams: d.dreams.filter((x) => x.id !== id) }));
+  const addReminder = (r) => { setData((d) => ({ ...d, reminders: [...d.reminders, r] })); setModal(null); try { if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {} };
+  const delReminder = (id) => setData((d) => ({ ...d, reminders: d.reminders.filter((x) => x.id !== id) }));
+  const openCd = (target) => { setCdTarget(target); setModal("countdown"); };
+
+  return (
+    <div dir="rtl" style={{ position: "relative", fontFamily: BODY, minHeight: "100vh", background: T.bg, overflow: "hidden" }}>
+      <style>{`
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        @keyframes pulseSoft { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes floaty { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(8deg); } }
+        @keyframes slideDown { from { opacity:0; transform: translateY(-16px);} to {opacity:1; transform:none;} }
+        .fade-up { animation: fadeUp .55s cubic-bezier(.2,.7,.2,1) both; }
+        .pulse-soft { animation: pulseSoft 2.4s ease-in-out infinite; }
+        .floaty { animation: floaty 4s ease-in-out infinite; }
+        .slide-down { animation: slideDown .35s ease both; }
+        *::-webkit-scrollbar { width: 0; height: 0; }
+        @media (prefers-reduced-motion: reduce) { .fade-up,.pulse-soft,.floaty,.slide-down { animation: none !important; } }
+      `}</style>
+
+      <div style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", top: 260, left: -90, width: 300, height: 300, borderRadius: 999, background: T.blobs[1], filter: "blur(80px)", opacity: 0.5 }} />
+        <div style={{ position: "absolute", bottom: -110, right: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+
+      {alertMsg && (
+        <div className="slide-down" style={{ position: "fixed", top: 14, left: 0, right: 0, zIndex: 60, display: "flex", justifyContent: "center", padding: "0 12px" }}>
+          <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: "#fff", boxShadow: "0 16px 40px -16px rgba(150,40,80,.5)", border: `1px solid ${C.line}`, maxWidth: 400 }}>
+            <Bell style={{ width: 18, height: 18, color: "#EC4899" }} />
+            <span className="font-bold" style={{ fontSize: 14, color: C.ink }}>{alertMsg}</span>
+            <button onClick={() => setAlertMsg(null)} className="shrink-0"><X style={{ width: 16, height: 16, color: C.muted }} /></button>
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto w-full px-4 pb-12 pt-5 space-y-4" style={{ maxWidth: 430, position: "relative", zIndex: 1 }}>
+
+        <Card className="fade-up p-3.5">
+          <div className="flex items-center gap-3">
+            <div className="grid place-items-center rounded-2xl shrink-0" style={{ width: 50, height: 50, background: T.icon, boxShadow: `0 8px 18px -8px ${T.swatch}` }}>
+              <Calendar style={{ width: 24, height: 24, color: "#fff" }} />
+            </div>
+            <button onClick={() => setModal("settings")} className="flex-1 text-center">
+              <div className="font-semibold" style={{ fontSize: 11, color: C.muted }}>היומן של</div>
+              <div style={{ fontFamily: SCRIPT, fontSize: 25, color: C.ink, lineHeight: 1.05 }}>{data.names.a} ו{data.names.b} ❤️</div>
+            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <RoundBtn onClick={() => setModal("settings")} className="w-9 h-9" style={{ background: "#F4EEF1" }} aria-label="הגדרות"><span style={{ fontSize: 17, lineHeight: 1 }}>⚙️</span></RoundBtn>
+              <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ background: "#EAF7EE" }}>
+                <span className="rounded-full" style={{ width: 7, height: 7, background: "#22C55E", boxShadow: "0 0 0 3px #22C55E33" }} />
+                <span className="font-bold" style={{ fontSize: 11, color: "#16A34A" }}>מסונכרן</span>
+              </div>
+            </div>
+          </div>
+          {daysTogether != null && (
+            <button onClick={() => setModal("settings")} className="w-full flex items-center justify-center gap-1.5 mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+              <Heart style={{ width: 14, height: 14, fill: "#EC4899", color: "#EC4899" }} />
+              <span style={{ fontFamily: SCRIPT, fontSize: 16, color: T.accent }}>ביחד כבר {daysTogether.toLocaleString("he-IL")} ימים</span>
+            </button>
+          )}
+        </Card>
+
+        <div className="fade-up flex items-center gap-2 px-1 flex-wrap" style={{ animationDelay: ".05s" }}>
+          <span className="font-semibold" style={{ fontSize: 13, color: C.muted }}>מי כותב/ת?</span>
+          {["a", "b"].map((p) => {
+            const c = p === "b" ? "#EC4899" : "#3B82F6"; const on = me === p;
+            return (
+              <button key={p} onClick={() => setMe(p)} className="flex items-center gap-1.5 rounded-full pl-3 pr-1.5 py-1 font-bold transition active:scale-95"
+                style={on ? { fontSize: 13, background: c, color: "#fff", boxShadow: `0 8px 18px -10px ${c}` } : { fontSize: 13, background: "#fff", color: C.muted, border: `1.5px solid ${C.line}` }}>
+                <span className="rounded-full grid place-items-center font-extrabold" style={{ width: 22, height: 22, fontSize: 11, background: on ? "rgba(255,255,255,.28)" : `${c}1a`, color: on ? "#fff" : c }}>{data.names[p].charAt(0)}</span>
+                {data.names[p]}
+              </button>
+            );
+          })}
+          {streak > 0 && (
+            <span className="flex items-center gap-1 rounded-full px-3 py-1.5" style={{ background: "#FFF1E6", border: "1px solid #FCE0CC" }}>
+              <span style={{ fontSize: 13 }}>🔥</span><span className="font-extrabold" style={{ fontSize: 12.5, color: "#EA580C" }}>{streak} ימים ברצף</span>
+            </span>
+          )}
+        </div>
+
+        {heroCd ? (
+          <Card className="fade-up relative overflow-hidden text-white p-5"
+            style={{ animationDelay: ".1s", border: "none", background: T.hero, boxShadow: `0 22px 46px -18px ${T.heroShadow}` }}>
+            <Sparkles className="floaty" style={{ position: "absolute", top: 14, left: 56, width: 18, height: 18, color: "rgba(255,255,255,.85)" }} />
+            <button onClick={() => openCd(heroCd)} className="absolute top-3 left-3 w-9 h-9 grid place-items-center rounded-full" style={{ background: "rgba(255,255,255,.25)" }}>
+              <Pencil style={{ width: 16, height: 16, color: "#fff" }} />
+            </button>
+            <div className="text-right" style={{ textShadow: "0 1px 8px rgba(120,20,40,.25)" }}>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.9)" }}>מתרגשים לקראת…</div>
+              <div className="font-black leading-tight" style={{ fontSize: 31, marginTop: 2 }}>{heroCd.title} {heroCd.emoji}</div>
+              <div style={{ fontSize: 12.5, marginTop: 3, color: "rgba(255,255,255,.85)" }}>נקבע ע״י {data.names[heroCd.setBy]}</div>
+            </div>
+            {cd.done ? (
+              <div className="mt-4 rounded-2xl py-5 text-center font-black" style={{ fontSize: 22, background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.25)" }}>🎉 הגיע היום! 🎉</div>
+            ) : (
+              <div className="mt-4 flex gap-2">
+                {[{ n: cd.days, l: "ימים" }, { n: cd.hours, l: "שעות" }, { n: cd.minutes, l: "דקות" }, { n: cd.seconds, l: "שניות", hot: true }].map((tile, i) => (
+                  <div key={i} className={"flex-1 rounded-2xl py-3 text-center" + (tile.hot ? " pulse-soft" : "")} style={{ background: "rgba(255,255,255,.16)", border: "1px solid rgba(255,255,255,.22)", backdropFilter: "blur(3px)" }}>
+                    <div className="font-black tabular-nums leading-none" style={{ fontSize: 26, color: tile.hot ? "#FFE08A" : "#fff" }}>{pad(tile.n)}</div>
+                    <div style={{ fontSize: 11, marginTop: 6, color: "rgba(255,255,255,.85)" }}>{tile.l}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        ) : (
+          <Card className="fade-up p-5 text-center" style={{ animationDelay: ".1s" }}>
+            <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>אין עדיין ספירה לאחור 🎉</div>
+            <button onClick={() => openCd(null)} className="mt-3 rounded-3xl px-5 py-3 text-white font-extrabold" style={{ fontSize: 14, background: "linear-gradient(95deg,#FB923C,#EF4444)" }}>+ הוספת ספירה</button>
+          </Card>
+        )}
+
+        {heroCd && (
+          <div className="fade-up flex gap-2 overflow-x-auto pb-1 px-1" style={{ animationDelay: ".12s" }}>
+            {otherCds.map((c) => {
+              const dd = Math.max(0, Math.ceil((new Date(c.date).getTime() - now) / 86400000));
+              return (
+                <button key={c.id} onClick={() => openCd(c)} className="shrink-0 rounded-2xl px-3 py-2 flex items-center gap-2 transition active:scale-95" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+                  <span style={{ fontSize: 18 }}>{c.emoji}</span>
+                  <div className="text-right"><div className="font-bold" style={{ fontSize: 13, color: C.ink }}>{c.title}</div><div style={{ fontSize: 11, color: C.muted }}>בעוד {dd.toLocaleString("he-IL")} ימים</div></div>
+                </button>
+              );
+            })}
+            <button onClick={() => openCd(null)} className="shrink-0 rounded-2xl px-4 py-2 flex items-center gap-1.5 font-bold transition active:scale-95" style={{ fontSize: 13, color: T.accent, background: "#fff", border: `1.5px dashed ${T.swatch}66` }}>
+              <Plus style={{ width: 16, height: 16 }} /> ספירה
+            </button>
+          </div>
+        )}
+
+        <MoodCard names={data.names} moodA={moodA} moodB={moodB} open={moodPickerFor} onOpen={(p) => setMoodPickerFor((x) => (x === p ? null : p))} onPick={setMood} />
+
+        {data.longDistance && <LongDistanceCard people={data.people} names={data.names} now={now} />}
+
+        <div className="fade-up space-y-2" style={{ animationDelay: ".18s" }}>
+          {visibleLetters.length === 0 && (
+            <Card className="p-6 text-center"><div className="font-bold" style={{ fontSize: 15, color: C.ink }}>אין מכתבים פתוחים כרגע 💌</div><div style={{ fontSize: 13, marginTop: 2, color: C.muted }}>כתבו מכתב חדש זה לזה למטה</div></Card>
+          )}
+          {visibleLetters.map((l) => {
+            const accent = l.from === "b" ? "#EC4899" : "#3B82F6";
+            const tint = l.from === "b" ? "#FFF5F9" : "#F4F8FF";
+            return (
+              <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
+                <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: accent }} />
+                {l.photo ? <img src={l.photo} alt="" className="rounded-2xl object-cover shrink-0" style={{ width: 48, height: 48 }} />
+                  : <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: `${accent}1f` }}><Heart style={{ width: 20, height: 20, fill: accent, color: accent }} /></div>}
+                <div className="flex-1 min-w-0 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <span className="flex items-center gap-1" style={{ fontSize: 11, color: C.muted }}><Clock style={{ width: 12, height: 12 }} /> {timeLabel(l.createdAt)}</span>
+                    <span className="font-extrabold" style={{ fontSize: 15, color: C.ink }}>מכתב מ{data.names[l.from]}{l.keepsake ? " ⭐" : ""}</span>
+                  </div>
+                  <div className="truncate" style={{ fontSize: 13, marginTop: 2, color: "#8C8593" }}>{l.text}</div>
+                </div>
+                <div className="relative shrink-0">
+                  <div className="rounded-full grid place-items-center" style={{ width: 38, height: 38, background: `${accent}1a` }}><Heart style={{ width: 18, height: 18, fill: accent, color: accent }} /></div>
+                  {l.reaction && <span style={{ position: "absolute", bottom: -6, left: -6, fontSize: 16, filter: "drop-shadow(0 1px 2px rgba(0,0,0,.15))" }}>{l.reaction}</span>}
+                </div>
+              </Card>
+            );
+          })}
+          <button onClick={() => setModal("letter")} className="w-full rounded-3xl py-3.5 flex items-center justify-center gap-2 text-white font-extrabold transition active:scale-95" style={{ fontSize: 15, background: `linear-gradient(95deg, ${meColor}, #F472B6)`, boxShadow: `0 14px 28px -14px ${meColor}` }}>
+            <Plus style={{ width: 20, height: 20 }} /> מכתב חדש מ{data.names[me]}
+          </button>
+        </div>
+
+        <Section icon={<ImageIcon style={{ width: 22, height: 22, color: "#EC4899" }} />} iconBg="#FCE7F0" title="המזכרות שלנו" badge={keepsakes.length} badgeColor="#EC4899" open={open.keepsakes} onToggle={() => toggle("keepsakes")}>
+          {keepsakes.length === 0 ? <div className="text-center py-4" style={{ fontSize: 13, color: C.muted }}>שמרו מכתב כמזכרת והוא יישמר כאן לתמיד ⭐</div> : (
+            <div className="grid grid-cols-3 gap-2">
+              {keepsakes.map((l) => {
+                const accent = l.from === "b" ? "#EC4899" : "#3B82F6";
+                return (
+                  <button key={l.id} onClick={() => setOpenLetter(l.id)} className="rounded-2xl overflow-hidden transition active:scale-95" style={{ border: `1px solid ${C.line}`, background: "#fff" }}>
+                    {l.photo ? <img src={l.photo} alt="" className="w-full object-cover" style={{ height: 84 }} />
+                      : <div className="w-full grid place-items-center" style={{ height: 84, background: `${accent}14` }}><Heart style={{ width: 26, height: 26, fill: accent, color: accent }} /></div>}
+                    <div className="px-2 py-1.5 text-right"><div className="font-bold truncate" style={{ fontSize: 11, color: C.ink }}>{data.names[l.from]}</div><div className="truncate" style={{ fontSize: 10, color: C.muted }}>{new Date(l.createdAt).toLocaleDateString("he-IL")}</div></div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Section>
+
+        <Section icon={<Cloud style={{ width: 22, height: 22, color: "#60A5FA" }} />} iconBg="#EAF2FF" title="רשימת החלומות שלנו" badge={`${pendingDreams} ממתינים`} badgeColor="#3B82F6" open={open.dreams} onToggle={() => toggle("dreams")}>
+          <AddRow value={dreamTxt} onChange={setDreamTxt} onAdd={addDream} placeholder="חלום חדש שנגשים ביחד…" grad="linear-gradient(135deg,#60A5FA,#7C3AED)" />
+          {data.dreams.map((d) => <ListRow key={d.id} text={d.text} done={d.done} onToggle={() => toggleDream(d.id)} onDelete={() => delDream(d.id)} />)}
+        </Section>
+
+        <Card className="fade-up p-4" style={{ animationDelay: ".26s" }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-black" style={{ fontSize: 22, color: C.ink }}>{MONTHS[m]} {y}</div>
+            <div className="flex gap-2">
+              <RoundBtn onClick={() => setCal((c) => c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 })} className="w-9 h-9" style={{ background: "#F6EEF2" }}><ChevronRight style={{ width: 20, height: 20, color: C.ink }} /></RoundBtn>
+              <RoundBtn onClick={() => setCal((c) => c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 })} className="w-9 h-9" style={{ background: "#F6EEF2" }}><ChevronLeft style={{ width: 20, height: 20, color: C.ink }} /></RoundBtn>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 mb-1">{DOW.map((d) => <div key={d} className="text-center font-bold py-1.5" style={{ fontSize: 12, color: C.muted }}>{d}</div>)}</div>
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((d, i) => {
+              if (d === null) return <div key={i} className="rounded-xl" style={{ background: "#F7F1F4", minHeight: 58 }} />;
+              const dISO = iso(y, m, d); const evs = eventsByDate[dISO] || []; const isToday = dISO === todayISO; const isSel = dISO === selectedDate;
+              return (
+                <button key={i} onClick={() => setSelectedDate(dISO)} className="rounded-xl p-1 flex flex-col items-center gap-0.5 transition" style={{ minHeight: 58, background: "#fff", outline: isSel ? "2px solid #F472B6" : `1px solid ${C.line}`, outlineOffset: -1 }}>
+                  <span className="font-bold grid place-items-center" style={isToday ? { width: 24, height: 24, borderRadius: 999, background: "#3B82F6", color: "#fff", fontSize: 13 } : { fontSize: 13, color: C.ink }}>{d}</span>
+                  <div className="w-full flex flex-col gap-0.5">
+                    {evs.slice(0, 2).map((e) => <div key={e.id} className="rounded text-white px-1 truncate leading-tight" style={{ fontSize: 9, paddingTop: 1, paddingBottom: 1, background: CATS[e.cat].bg }}>{e.title}</div>)}
+                    {evs.length > 2 && <div className="text-center font-bold" style={{ fontSize: 8.5, color: C.muted }}>+{evs.length - 2} נוספים</div>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="fade-up overflow-hidden" style={{ animationDelay: ".3s" }}>
+          <div className="p-4" style={{ background: "linear-gradient(95deg,#F3EEFF,#FCEFF6)" }}>
+            <div className="text-right font-extrabold" style={{ fontSize: 19, color: C.ink }}>תוכניות ל־{selDay} ב{MONTHS[selMonthIdx]}</div>
+            <div className="text-right" style={{ fontSize: 13, marginTop: 2, color: C.muted }}>{dayEvents.length ? `${dayEvents.length} ${dayEvents.length === 1 ? "אירוע" : "אירועים"}` : (selectedDate === todayISO ? "אין תוכניות להיום 😉" : "אין אירועים ליום זה")}</div>
+          </div>
+          <div className="p-3">
+            {dayEvents.length === 0 ? (
+              <div className="py-10 text-center">
+                <div className="grid place-items-center mx-auto mb-3 rounded-full" style={{ width: 64, height: 64, background: "#F4EEF1" }}><Calendar style={{ width: 28, height: 28, color: "#C9B6C0" }} /></div>
+                <div className="font-bold" style={{ fontSize: 16, color: "#7C8595" }}>אין תוכניות ליום זה</div>
+                <div style={{ fontSize: 13, marginTop: 2, color: C.muted }}>תוכלו להוסיף תוכנית חדשה למטה</div>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-3">
+                {dayEvents.map((e) => (
+                  <div key={e.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: C.soft }}>
+                    <span className="rounded-full shrink-0" style={{ width: 10, height: 36, background: CATS[e.cat].bg }} />
+                    <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 15, color: C.ink }}>{e.title}</div><div style={{ fontSize: 12, color: C.muted }}>{CATS[e.cat].label}</div></div>
+                    <button onClick={() => delEvent(e.id)} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setModal("event")} className="w-full rounded-3xl py-4 flex items-center justify-center gap-2 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: T.cta, boxShadow: `0 14px 30px -16px ${T.swatch}` }}>
+              <Plus style={{ width: 20, height: 20 }} /> הוספת אירוע ליום זה
+            </button>
+          </div>
+        </Card>
+
+        <Section icon={<Bell style={{ width: 22, height: 22, color: "#F59E0B" }} />} iconBg="#FDF3DC" title="תזכורות" badge={data.reminders.filter((r) => !r.fired).length || null} badgeColor="#F59E0B" open={open.reminders} onToggle={() => toggle("reminders")}>
+          <button onClick={() => setModal("reminder")} className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-white font-bold transition active:scale-95" style={{ fontSize: 14, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}><Plus style={{ width: 18, height: 18 }} /> תזכורת חדשה</button>
+          {data.reminders.length === 0 ? <div className="text-center py-2" style={{ fontSize: 12.5, color: C.muted }}>אין תזכורות. שימו לב: התראות עובדות בזמן שהאפליקציה פתוחה.</div> :
+            [...data.reminders].sort((a, b) => new Date(a.at) - new Date(b.at)).map((r) => (
+              <div key={r.id} className="flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: C.soft, opacity: r.fired ? 0.6 : 1 }}>
+                <Bell style={{ width: 16, height: 16, color: r.fired ? C.muted : "#F59E0B" }} />
+                <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 14, color: C.ink, textDecoration: r.fired ? "line-through" : "none" }}>{r.text}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{new Date(r.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{r.fired ? " · בוצע" : ""}</div></div>
+                <button onClick={() => delReminder(r.id)} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+              </div>
+            ))}
+        </Section>
+
+        <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {data.names.a} ו{data.names.b} ❤️</div>
+
+        <div className="flex flex-col items-center gap-1.5 pt-2">
+          {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
+          <button onClick={doSignOut} className="flex items-center gap-1.5 rounded-full px-4 py-2 font-bold transition active:scale-95" style={{ fontSize: 12.5, color: "#EF4444", background: "#FDECEC" }}>
+            <LogOut style={{ width: 14, height: 14 }} /> התנתקות
+          </button>
+        </div>
+      </div>
+
+      {openLetter && (() => {
+        const l = data.letters.find((x) => x.id === openLetter);
+        if (!l) return null;
+        return <LetterViewer letter={l} names={data.names} now={now} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
+      })()}
+      {modal === "letter" && (<Modal onClose={() => setModal(null)} accent={meColor}><WriteLetterForm from={me} names={data.names} onSave={addLetter} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={data.names} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
+      {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+/* Build the app icon (sunset journal + heart) on a canvas, then wire up
+   favicon, apple-touch-icon and a web app manifest — all inline, no extra files. */
+(function () {
+  function roundRect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+  function heart(x, cx, cy, s, color) { x.save(); x.translate(cx, cy); x.scale(s / 32, s / 32); x.beginPath(); x.moveTo(0, 10); x.bezierCurveTo(-14, -4, -10, -20, 0, -10); x.bezierCurveTo(10, -20, 14, -4, 0, 10); x.closePath(); x.fillStyle = color; x.fill(); x.restore(); }
+  function makeIcon(S) {
+    var c = document.createElement("canvas"); c.width = c.height = S; var x = c.getContext("2d");
+    var g = x.createLinearGradient(0, 0, S, S); g.addColorStop(0, "#FF9F5A"); g.addColorStop(.55, "#FB6F7F"); g.addColorStop(1, "#EE4F6E");
+    roundRect(x, 0, 0, S, S, S * 0.22); x.fillStyle = g; x.fill();
+    x.save(); x.translate(S * 0.5, S * 0.52); x.rotate(-0.05);
+    var bw = S * 0.46, bh = S * 0.56;
+    x.shadowColor = "rgba(120,20,40,.30)"; x.shadowBlur = S * 0.05; x.shadowOffsetY = S * 0.02;
+    roundRect(x, -bw / 2, -bh / 2, bw, bh, S * 0.07); x.fillStyle = "#FFFFFF"; x.fill();
+    x.shadowColor = "transparent";
+    roundRect(x, -bw / 2, -bh / 2, S * 0.11, bh, S * 0.055); x.fillStyle = "#F7C9DB"; x.fill();
+    heart(x, S * 0.03, 0, S * 0.30, "#EC4899");
+    x.restore();
+    return c.toDataURL("image/png");
+  }
+  function setLink(rel, href, sizes) {
+    var l = document.createElement("link"); l.rel = rel; l.href = href; if (sizes) l.setAttribute("sizes", sizes);
+    document.head.appendChild(l);
+  }
+  try {
+    var i192 = makeIcon(192), i512 = makeIcon(512);
+    setLink("icon", i192, "192x192");
+    setLink("apple-touch-icon", i192);
+    var startUrl = location.href.split("#")[0].split("?")[0];
+    var scope = startUrl.replace(/[^/]*$/, "");
+    var manifest = {
+      name: "היומן של אסף וליאל", short_name: "היומן שלנו",
+      description: "היומן הזוגי שלנו", start_url: startUrl, scope: scope,
+      display: "standalone", orientation: "portrait",
+      background_color: "#FDF1F4", theme_color: "#EE4F6E", lang: "he", dir: "rtl",
+      icons: [
+        { src: i192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: i512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    var blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    setLink("manifest", URL.createObjectURL(blob));
+  } catch (e) { console.error("icon/manifest setup failed", e); }
+})();
+</script>
+</body>
+</html>
