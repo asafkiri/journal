@@ -398,6 +398,7 @@ function EventForm({ presetDate, onSave, onClose }) {
   const [title, setTitle] = useState("");
   const [cat, setCat] = useState("fun");
   const [date, setDate] = useState(presetDate);
+  const [time, setTime] = useState("");
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-4">
@@ -406,8 +407,14 @@ function EventForm({ presetDate, onSave, onClose }) {
       </div>
       <Label>מה קורה?</Label>
       <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="לדוגמה: ארוחת ערב בחוץ" className={inputCls + " mb-4"} style={inputStyle} />
-      <Label>תאריך</Label>
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls + " mb-4"} style={inputStyle} />
+      <div className="flex gap-2 mb-2">
+        <div className="flex-1"><Label>תאריך</Label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} style={inputStyle} /></div>
+        <div className="flex-1"><Label>שעה (לא חובה)</Label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} style={inputStyle} /></div>
+      </div>
+      <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
+        <span style={{ fontSize: 14 }}>🔔</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>אם תבחר שעה, האפליקציה תתן לך התראה כשהזמן מגיע (בזמן שהאפליקציה פתוחה או ברקע).</span>
+      </div>
       <Label>סוג</Label>
       <div className="grid grid-cols-2 gap-2 mb-5">
         {Object.entries(CATS).map(([k, c]) => (
@@ -417,7 +424,7 @@ function EventForm({ presetDate, onSave, onClose }) {
           </button>
         ))}
       </div>
-      <button disabled={!title.trim()} onClick={() => onSave({ id: uid(), date, title: title.trim(), cat })}
+      <button disabled={!title.trim()} onClick={() => onSave({ id: uid(), date, title: title.trim(), cat, time: time || "", at: time ? new Date(date + "T" + time).toISOString() : null })}
         className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#7C3AED,#3B6BFF)" }}>הוספה ללוח</button>
     </div>
   );
@@ -502,18 +509,11 @@ function ReminderForm({ onSave, onClose }) {
       <Label>מתי?</Label>
       <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-3"} style={inputStyle} />
       <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
-        <span style={{ fontSize: 14 }}>📅</span>
-        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>הכפתור יפתח את יומן הטלפון עם התראה מוכנה — ככה תקבל התראה גם כשהאפליקציה סגורה. אשרו "הוסף" במסך שייפתח.</span>
+        <span style={{ fontSize: 14 }}>🔔</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>האפליקציה תתן לך התראה כשהזמן מגיע (בזמן שהיא פתוחה או ברקע). לאחר השמירה אפשר גם ללחוץ 📅 ליד התזכורת כדי להוסיף אותה ליומן הטלפון.</span>
       </div>
-      {text.trim() ? (
-        <a href={buildICSHref(text.trim(), new Date(dt).toISOString())}
-          onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
-          className="block w-full text-center rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)", textDecoration: "none" }}>
-          שמירה + הוספה ליומן 📅
-        </a>
-      ) : (
-        <button disabled className="w-full rounded-3xl py-4 text-white font-extrabold opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירה + הוספה ליומן 📅</button>
-      )}
+      <button disabled={!text.trim()} onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת</button>
     </div>
   );
 }
@@ -850,6 +850,7 @@ function App() {
   const saveTimerRef = useRef(null);
   const seenLettersRef = useRef(null);
   const localLettersRef = useRef(new Set());
+  const notifiedEventsRef = useRef(new Set());
 
   const [now, setNow] = useState(Date.now());
   const [me, setMe] = useState("b");
@@ -937,7 +938,23 @@ function App() {
     });
   }, [now]);
 
-  // notify when a new letter arrives from the other device (works while app is open / in background)
+  // fire notifications for timed calendar events (while app is open / in background)
+  useEffect(() => {
+    if (!data || !data.events || !data.events.length) return;
+    const nowMs = Date.now();
+    data.events.forEach((e) => {
+      if (!e.at || notifiedEventsRef.current.has(e.id)) return;
+      const t = new Date(e.at).getTime();
+      if (isNaN(t)) return;
+      if (t <= nowMs && nowMs - t < 120000) {
+        notifiedEventsRef.current.add(e.id);
+        const msg = "🗓️ " + e.title;
+        setAlertMsg(msg);
+        setTimeout(() => setAlertMsg((a) => (a === msg ? null : a)), 6000);
+        try { if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("יומן ❤️", { body: e.title }); } catch {}
+      }
+    });
+  }, [now]);
   useEffect(() => {
     if (!data) return;
     const ids = data.letters.map((l) => l.id);
@@ -1050,7 +1067,7 @@ function App() {
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
   const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true } : l) }));
   const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
-  const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
+  const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); try { if (e.at && typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission(); } catch {} };
   const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
   const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
   const delCountdown = (id) => { setData((d) => ({ ...d, countdowns: d.countdowns.filter((x) => x.id !== id) })); setModal(null); setCdTarget(null); };
@@ -1303,7 +1320,10 @@ function App() {
                 {dayEvents.map((e) => (
                   <div key={e.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: C.soft }}>
                     <span className="rounded-full shrink-0" style={{ width: 10, height: 36, background: CATS[e.cat].bg }} />
-                    <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 15, color: C.ink }}>{e.title}</div><div style={{ fontSize: 12, color: C.muted }}>{CATS[e.cat].label}</div></div>
+                    <div className="flex-1 text-right">
+                      <div className="font-bold flex items-center justify-end gap-1.5" style={{ fontSize: 15, color: C.ink }}>{e.title}{e.time ? <span style={{ fontSize: 12 }}>🔔</span> : null}</div>
+                      <div style={{ fontSize: 12, color: C.muted }}>{e.time ? `${e.time} · ` : ""}{CATS[e.cat].label}</div>
+                    </div>
                     <button onClick={() => delEvent(e.id)} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
                   </div>
                 ))}
