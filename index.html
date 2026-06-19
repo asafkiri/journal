@@ -462,6 +462,35 @@ function CountdownForm({ current, names, defaultBy, onSave, onDelete, onClose })
   );
 }
 
+function addToPhoneCalendar(text, atISO) {
+  try {
+    const start = new Date(atISO);
+    if (isNaN(start.getTime())) return;
+    const z = (n) => String(n).padStart(2, "0");
+    const fmt = (d) => d.getUTCFullYear() + z(d.getUTCMonth() + 1) + z(d.getUTCDate()) + "T" + z(d.getUTCHours()) + z(d.getUTCMinutes()) + z(d.getUTCSeconds()) + "Z";
+    const end = new Date(start.getTime() + 15 * 60000);
+    const esc = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/[,;]/g, (m) => "\\" + m).replace(/\r?\n/g, "\\n");
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Couple Journal//HE", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      "UID:" + Date.now() + "-" + Math.random().toString(36).slice(2) + "@couple-journal",
+      "DTSTAMP:" + fmt(new Date()),
+      "DTSTART:" + fmt(start),
+      "DTEND:" + fmt(end),
+      "SUMMARY:" + esc(text),
+      "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + esc(text),
+      "TRIGGER;VALUE=DATE-TIME:" + fmt(start),
+      "END:VALARM",
+      "END:VEVENT", "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if (!w) window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 10000);
+  } catch (e) { console.error("calendar add failed", e); }
+}
+
 function ReminderForm({ onSave, onClose }) {
   const [text, setText] = useState("");
   const init = new Date(Date.now() + 36e5);
@@ -475,9 +504,13 @@ function ReminderForm({ onSave, onClose }) {
       <Label>על מה להזכיר?</Label>
       <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="לדוגמה: להתקשר לאמא 💛" className={inputCls + " mb-4"} style={inputStyle} />
       <Label>מתי?</Label>
-      <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-5"} style={inputStyle} />
-      <button disabled={!text.trim()} onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
-        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת</button>
+      <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-3"} style={inputStyle} />
+      <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
+        <span style={{ fontSize: 14 }}>📅</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>נוסיף את התזכורת גם ליומן של הטלפון — ככה תקבל התראה גם כשהאפליקציה סגורה. אשרו "הוסף" במסך שייפתח.</span>
+      </div>
+      <button disabled={!text.trim()} onClick={() => { const r = { id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false }; addToPhoneCalendar(r.text, r.at); onSave(r); }}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת + ליומן</button>
     </div>
   );
 }
@@ -1288,7 +1321,10 @@ function App() {
                 <Bell style={{ width: 16, height: 16, color: r.fired ? C.muted : "#F59E0B" }} />
                 <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 14, color: C.ink, textDecoration: r.fired ? "line-through" : "none" }}>{r.text}</div>
                   <div style={{ fontSize: 11, color: C.muted }}>{new Date(r.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{r.fired ? " · בוצע" : ""}</div></div>
-                <button onClick={() => delReminder(r.id)} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {!r.fired && <button onClick={() => addToPhoneCalendar(r.text, r.at)} title="הוסף ליומן הטלפון" style={{ fontSize: 17 }}>📅</button>}
+                  <button onClick={() => delReminder(r.id)}><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                </div>
               </div>
             ))}
         </Section>
