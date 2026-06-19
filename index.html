@@ -552,7 +552,7 @@ function ReminderForm({ onSave, onClose }) {
   );
 }
 
-function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, dateIdeas, onTestNtfy, email, onResetPassword, onSave, onClose }) {
+function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, dateIdeas, coupleId, onTestNtfy, email, onResetPassword, onSave, onClose }) {
   const [a, setA] = useState(names.a);
   const [b, setB] = useState(names.b);
   const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
@@ -564,6 +564,8 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
   const [ntOn, setNtOn] = useState(!!ntfyOn);
   const [ntTopic, setNtTopic] = useState(ntfyTopic || "");
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const copyCode = () => { try { navigator.clipboard.writeText(coupleId || ""); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500); } catch (e) {} };
   const [ideas, setIdeas] = useState(Array.isArray(dateIdeas) ? [...dateIdeas] : []);
   const [ideaTxt, setIdeaTxt] = useState("");
   const addIdea = () => { if (ideaTxt.trim()) { setIdeas((a) => [...a, ideaTxt.trim()]); setIdeaTxt(""); } };
@@ -580,6 +582,15 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
         <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>ההגדרות שלנו ⚙️</span>
         <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
       </div>
+      <div className="mb-5 rounded-2xl p-3" style={{ background: "#FBF1F7", border: "1px solid #F3D9E8" }}>
+        <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>💞</span><span className="font-extrabold" style={{ fontSize: 13, color: "#A21D6E" }}>קוד הזוג שלכם</span></div>
+        <div style={{ fontSize: 12, color: "#9B5478", lineHeight: 1.6, marginBottom: 8 }}>שלחו את הקוד לבן/בת הזוג — הוא/היא ייכנס/תיכנס עם החשבון שלו/ה ויבחר/תבחר "הצטרפות עם קוד".</div>
+        <div className="flex items-center gap-2">
+          <input readOnly value={coupleId || ""} className={inputCls} style={{ ...inputStyle, direction: "ltr", textAlign: "left", fontSize: 13, fontWeight: 700 }} />
+          <button onClick={copyCode} className="shrink-0 rounded-2xl px-3 py-2 font-bold text-white" style={{ fontSize: 12.5, background: "#EC4899" }}>{codeCopied ? "הועתק ✓" : "העתק"}</button>
+        </div>
+      </div>
+
       <Label>השמות שלנו</Label>
       <div className="flex gap-2 mb-4">
         <input value={a} onChange={(e) => setA(e.target.value)} className={inputCls} style={inputStyle} />
@@ -854,7 +865,7 @@ function LoginScreen({ onSignIn, onSignUp, busy, error }) {
             <Heart style={{ width: 30, height: 30, fill: "#fff", color: "#fff" }} />
           </div>
           <div style={{ fontFamily: SCRIPT, fontSize: 30, color: C.ink, lineHeight: 1.1 }}>היומן שלנו ❤️</div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>התחברו עם המייל והסיסמה המשותפים שלכם</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>התחברו עם החשבון האישי שלכם</div>
         </div>
         <Label>אימייל</Label>
         <input type="email" autoCapitalize="none" autoCorrect="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" className={inputCls + " mb-3"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
@@ -868,7 +879,7 @@ function LoginScreen({ onSignIn, onSignUp, busy, error }) {
           יצירת חשבון חדש (פעם ראשונה)
         </button>
         <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 14, lineHeight: 1.6 }}>
-          טיפ: צרו חשבון אחד משותף לשניכם — כך תראו את אותו יומן בשני המכשירים 💕
+          טיפ: לכל אחד מכם חשבון אישי. אחרי ההתחברות תיצרו יומן משותף ותתחברו אליו עם קוד 💕
         </div>
       </div>
     </div>
@@ -907,6 +918,56 @@ function VerifyScreen({ email, busy, msg, onResend, onCheck, onSignOut }) {
         <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
           לא מוצאים את המייל? בדקו בתיקיית הספאם / קידומי מכירות.
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkScreen({ busy, error, onCreate, onJoin, onSignOut }) {
+  const [mode, setMode] = useState(null);
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const T = THEMES.sunset;
+  const shell = { minHeight: "100vh", background: T.bg, fontFamily: BODY, display: "grid", placeItems: "center", padding: 16, position: "relative", overflow: "hidden" };
+  const cta = { fontSize: 16, background: T.cta };
+  return (
+    <div dir="rtl" style={shell}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", bottom: -110, left: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+      <div className="rounded-3xl" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 380, background: "#fff", border: `1px solid ${C.line}`, boxShadow: "0 26px 64px -24px rgba(150,40,80,.45)", padding: 26 }}>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div className="grid place-items-center rounded-2xl" style={{ width: 60, height: 60, margin: "0 auto 12px", background: T.icon, boxShadow: `0 10px 22px -8px ${T.swatch}` }}>
+            <Heart style={{ width: 30, height: 30, fill: "#fff", color: "#fff" }} />
+          </div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink, lineHeight: 1.1 }}>היומן הזוגי שלכם 💞</div>
+          <div style={{ fontSize: 13.5, color: C.muted, marginTop: 8, lineHeight: 1.6 }}>צרו יומן חדש, או הצטרפו ליומן של בן/בת הזוג עם קוד שתקבלו ממנו/ה</div>
+        </div>
+        {error && <div className="rounded-2xl px-4 py-3 mb-4 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{error}</div>}
+
+        {mode === null && (<>
+          <button onClick={() => { setMode("create"); }} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 mb-2" style={cta}>יצירת יומן חדש 💞</button>
+          <button onClick={() => { setMode("join"); }} className="w-full rounded-3xl py-3.5 font-bold transition active:scale-95" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>הצטרפות עם קוד</button>
+        </>)}
+
+        {mode === "create" && (<>
+          <Label>השם שלך</Label>
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="איך קוראים לך?" className={inputCls + " mb-4"} style={inputStyle} />
+          <button disabled={busy} onClick={() => onCreate(name)} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={cta}>{busy ? "יוצר…" : "צור יומן 💞"}</button>
+          <button onClick={() => setMode(null)} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 13, background: "#F6EEF2", color: C.ink }}>חזרה</button>
+        </>)}
+
+        {mode === "join" && (<>
+          <Label>קוד היומן</Label>
+          <input autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="הדביקו את הקוד שקיבלתם" className={inputCls + " mb-3"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
+          <Label>השם שלך</Label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="איך קוראים לך?" className={inputCls + " mb-4"} style={inputStyle} />
+          <button disabled={busy} onClick={() => onJoin(code, name)} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={cta}>{busy ? "מצטרף…" : "הצטרפות 💞"}</button>
+          <button onClick={() => setMode(null)} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 13, background: "#F6EEF2", color: C.ink }}>חזרה</button>
+        </>)}
+
+        <button onClick={onSignOut} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 12.5, background: "transparent", color: "#EF4444", marginTop: 10 }}>התנתקות</button>
       </div>
     </div>
   );
@@ -1000,6 +1061,10 @@ function App() {
   const [verifyMsg, setVerifyMsg] = useState("");
 
   const [data, setData] = useState(null);
+  const [coupleId, setCoupleId] = useState(null);
+  const [linkReady, setLinkReady] = useState(false);
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkErr, setLinkErr] = useState("");
   const lastSavedRef = useRef("");
   const saveTimerRef = useRef(null);
   const seenLettersRef = useRef(null);
@@ -1007,7 +1072,6 @@ function App() {
 
 
   const [now, setNow] = useState(Date.now());
-  const [me, setMe] = useState("b");
   const [modal, setModal] = useState(null);
   const [cdTarget, setCdTarget] = useState(null);
   const [openLetter, setOpenLetter] = useState(null);
@@ -1046,37 +1110,47 @@ function App() {
     return () => unsub();
   }, [fb]);
 
-  // live load from Firestore (and seed on first login)
+  // find which couple this user belongs to (reacts when they create/join)
   useEffect(() => {
-    if (!fb || !user || !verified) { setData(null); return; }
+    if (!fb || !user || !verified) { setCoupleId(null); setLinkReady(false); return; }
     const ref = fb.doc(fb.db, "users", user.uid);
-    const unsub = fb.onSnapshot(ref, async (snap) => {
-      if (snap.exists() && snap.data() && snap.data().letters) {
-        const norm = normalize(snap.data());
-        lastSavedRef.current = JSON.stringify(norm);
-        setData(norm);
-      } else {
-        const s = buildSeed();
-        lastSavedRef.current = JSON.stringify(s);
-        setData(s);
-        try { await fb.setDoc(ref, s); } catch (e) { console.error("seed save failed", e); }
-      }
-    }, (err) => { console.error("snapshot error", err); });
+    const unsub = fb.onSnapshot(ref, (snap) => {
+      setCoupleId(snap.exists() && snap.data() ? (snap.data().coupleId || null) : null);
+      setLinkReady(true);
+    }, (err) => { console.error("mapping snapshot", err); setLinkReady(true); });
     return () => unsub();
   }, [fb, user, verified]);
 
-  // save to Firestore (debounced, skips echo from snapshot)
+  // live load the shared couple journal
   useEffect(() => {
-    if (!fb || !user || !data) return;
+    if (!fb || !user || !verified || !coupleId) { setData(null); return; }
+    const ref = fb.doc(fb.db, "couples", coupleId);
+    const unsub = fb.onSnapshot(ref, (snap) => {
+      if (snap.exists() && snap.data()) {
+        const raw = snap.data();
+        const norm = normalize(raw);
+        norm.a = raw.a || null;
+        norm.b = raw.b || null;
+        lastSavedRef.current = JSON.stringify(norm);
+        setData(norm);
+      }
+    }, (err) => console.error("couple snapshot error", err));
+    return () => unsub();
+  }, [fb, user, verified, coupleId]);
+
+  // save journal (debounced; never overwrites membership a/b)
+  useEffect(() => {
+    if (!fb || !user || !data || !coupleId) return;
     const j = JSON.stringify(data);
     if (j === lastSavedRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       lastSavedRef.current = j;
-      fb.setDoc(fb.doc(fb.db, "users", user.uid), JSON.parse(j)).catch((e) => console.error("save failed", e));
+      const obj = JSON.parse(j); delete obj.a; delete obj.b;
+      fb.setDoc(fb.doc(fb.db, "couples", coupleId), obj, { merge: true }).catch((e) => console.error("save failed", e));
     }, 400);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [data, fb, user]);
+  }, [data, fb, user, coupleId]);
 
   // mark reminders as done once their time passes (no in-app pop-up)
   useEffect(() => {
@@ -1147,6 +1221,28 @@ function App() {
   async function doSignOut() { try { await fb.signOut(fb.auth); } catch (e) { console.error(e); } }
   async function doResetPassword() { try { if (user && user.email) { await fb.sendPasswordResetEmail(fb.auth, user.email); return true; } return false; } catch (e) { console.error(e); return false; } }
 
+  async function doCreateCouple(name) {
+    setLinkErr(""); setLinkBusy(true);
+    try {
+      const cid = "c" + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 6);
+      const seed = buildSeed(); seed.names = { a: (name || "").trim(), b: "" };
+      await fb.setDoc(fb.doc(fb.db, "couples", cid), { a: user.uid, b: null, ...seed });
+      await fb.setDoc(fb.doc(fb.db, "users", user.uid), { coupleId: cid });
+    } catch (e) { console.error("create couple failed", e); setLinkErr("שגיאה ביצירה, נסו שוב"); }
+    finally { setLinkBusy(false); }
+  }
+  async function doJoinCouple(code, name) {
+    setLinkErr("");
+    const c = (code || "").trim();
+    if (!c) { setLinkErr("הזינו קוד"); return; }
+    setLinkBusy(true);
+    try {
+      await fb.setDoc(fb.doc(fb.db, "couples", c), { b: user.uid, names: { b: (name || "").trim() } }, { merge: true });
+      await fb.setDoc(fb.doc(fb.db, "users", user.uid), { coupleId: c });
+    } catch (e) { console.error("join couple failed", e); setLinkErr("קוד לא תקין, או שהיומן כבר מלא"); setLinkBusy(false); return; }
+    setLinkBusy(false);
+  }
+
   async function resendVerification() {
     setVerifyMsg(""); setVerifyBusy(true);
     try {
@@ -1171,6 +1267,8 @@ function App() {
   if (!fb || !authReady) return <Splash text="טוען…" />;
   if (!user) return <LoginScreen onSignIn={doSignIn} onSignUp={doSignUp} busy={authBusy} error={authErr} />;
   if (!verified) return <VerifyScreen email={user.email} busy={verifyBusy} msg={verifyMsg} onResend={resendVerification} onCheck={checkVerified} onSignOut={doSignOut} />;
+  if (!linkReady) return <Splash text="טוען…" />;
+  if (!coupleId) return <LinkScreen busy={linkBusy} error={linkErr} onCreate={doCreateCouple} onJoin={doJoinCouple} onSignOut={doSignOut} />;
   if (!data) return <Splash text="טוען את היומן…" />;
 
   /* non-hook derived (only when data exists) */
@@ -1196,6 +1294,7 @@ function App() {
   const selDay = Number(selectedDate.slice(8, 10));
   const selMonthIdx = Number(selectedDate.slice(5, 7)) - 1;
   const dayEvents = eventsByDate[selectedDate] || [];
+  const me = (data.b && user.uid === data.b) ? "b" : "a";
   const meColor = me === "b" ? "#EC4899" : "#3B82F6";
   const N = { a: data.names.a || "אני", b: data.names.b || "את/ה" };
   const coupleTitle = (data.names.a || data.names.b) ? `${data.names.a} ו${data.names.b}` : "היומן שלנו";
@@ -1279,17 +1378,10 @@ function App() {
         </Card>
 
         <div className="fade-up flex items-center gap-2 px-1 flex-wrap" style={{ animationDelay: ".05s" }}>
-          <span className="font-semibold" style={{ fontSize: 13, color: C.muted }}>מי כותב/ת?</span>
-          {["a", "b"].map((p) => {
-            const c = p === "b" ? "#EC4899" : "#3B82F6"; const on = me === p;
-            return (
-              <button key={p} onClick={() => setMe(p)} className="flex items-center gap-1.5 rounded-full pl-3 pr-1.5 py-1 font-bold transition active:scale-95"
-                style={on ? { fontSize: 13, background: c, color: "#fff", boxShadow: `0 8px 18px -10px ${c}` } : { fontSize: 13, background: "#fff", color: C.muted, border: `1.5px solid ${C.line}` }}>
-                <span className="rounded-full grid place-items-center font-extrabold" style={{ width: 22, height: 22, fontSize: 11, background: on ? "rgba(255,255,255,.28)" : `${c}1a`, color: on ? "#fff" : c }}>{N[p].charAt(0)}</span>
-                {N[p]}
-              </button>
-            );
-          })}
+          <span className="flex items-center gap-1.5 rounded-full pl-3 pr-1.5 py-1 font-bold" style={{ fontSize: 13, background: meColor, color: "#fff", boxShadow: `0 8px 18px -10px ${meColor}` }}>
+            <span className="rounded-full grid place-items-center font-extrabold" style={{ width: 22, height: 22, fontSize: 11, background: "rgba(255,255,255,.28)", color: "#fff" }}>{(N[me] || "").charAt(0) || "♥"}</span>
+            ✍️ כותב/ת בתור {N[me]}
+          </span>
           {streak > 0 && (
             <span className="flex items-center gap-1 rounded-full px-3 py-1.5" style={{ background: "#FFF1E6", border: "1px solid #FCE0CC" }}>
               <span style={{ fontSize: 13 }}>🔥</span><span className="font-extrabold" style={{ fontSize: 12.5, color: "#EA580C" }}>{streak} ימים ברצף</span>
@@ -1538,7 +1630,7 @@ function App() {
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
       {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={N} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
       {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
-      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} dateIdeas={data.dateIdeas} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} dateIdeas={data.dateIdeas} coupleId={coupleId} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
     </div>
   );
 }
