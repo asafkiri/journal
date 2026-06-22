@@ -653,12 +653,12 @@ function sendNtfy(topic, message) {
 const WORKER_URL = "https://journal-notifier.asafkiri.workers.dev";
 
 function scheduleWorker(id, topic, message, fireAtMs) {
-  if (!topic || !id) return;
+  if (!topic || !id) { alert("דילוג: חסר topic או id (topic=" + topic + ")"); return; }
   fetch(WORKER_URL + "/schedule", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, topic, message, fireAt: fireAtMs, title: "היומן שלנו ❤️" }),
-  }).catch(function () {});
+  }).then(function (r) { return r.text(); }).then(function (t) { alert("✅ נשלח לשרת! תשובה: " + t); }).catch(function (e) { alert("❌ שגיאה בשליחה: " + e.message); });
 }
 
 function cancelWorker(id) {
