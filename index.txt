@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>היומן של אסף וליאל ❤️</title>
+<meta name="theme-color" content="#EE4F6E" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="היומן שלנו" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gveret+Levin&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style>
+  html,body{margin:0;padding:0;}
+  body{font-family:Rubik,system-ui,sans-serif;-webkit-tap-highlight-color:transparent;}
+  *::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase (loads as a module, then exposes helpers on window.__fb) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAan_Ogz5E2K-6nJtlLvpFiLXiUYSDXxyM",
+    authDomain: "liel-and-asaf.firebaseapp.com",
+    projectId: "liel-and-asaf",
+    storageBucket: "liel-and-asaf.firebasestorage.app",
+    messagingSenderId: "94332355608",
+    appId: "1:94332355608:web:80b08c94034e50be63ef6d",
+    measurementId: "G-JQ24Z2D5F5"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
+
+  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, onSnapshot };
+  window.dispatchEvent(new Event("fb-ready"));
+</script>
+
+<!-- The app (JSX, transpiled in the browser by Babel) -->
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ============================ icons (inline SVG) ============================ */
+function Svg({ style, children }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={style}>{children}</svg>;
+}
+const Heart = ({ style }) => <Svg style={style}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.49 4.04 3 5.5l7 7Z" /></Svg>;
+const Calendar = ({ style }) => <Svg style={style}><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></Svg>;
+const Cloud = ({ style }) => <Svg style={style}><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></Svg>;
+const Trash2 = ({ style }) => <Svg style={style}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" /></Svg>;
+const Camera = ({ style }) => <Svg style={style}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" /><circle cx="12" cy="13" r="3" /></Svg>;
+const Clock = ({ style }) => <Svg style={style}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></Svg>;
+const Plus = ({ style }) => <Svg style={style}><path d="M12 5v14M5 12h14" /></Svg>;
+const X = ({ style }) => <Svg style={style}><path d="M18 6 6 18M6 6l12 12" /></Svg>;
+const Check = ({ style }) => <Svg style={style}><path d="M20 6 9 17l-5-5" /></Svg>;
+const Pencil = ({ style }) => <Svg style={style}><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></Svg>;
+const ChevronRight = ({ style }) => <Svg style={style}><path d="m9 18 6-6-6-6" /></Svg>;
+const ChevronLeft = ({ style }) => <Svg style={style}><path d="m15 18-6-6 6-6" /></Svg>;
+const ImagePlus = ({ style }) => <Svg style={style}><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7M16 5h6M19 2v6" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></Svg>;
+const Sparkles = ({ style }) => <Svg style={style}><path d="M12 3l1.9 5.8L19.7 10l-5.8 1.9L12 17.7 10.1 11.9 4.3 10l5.8-1.9z" /></Svg>;
+const Bell = ({ style }) => <Svg style={style}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Svg>;
+const ImageIcon = ({ style }) => <Svg style={style}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" /></Svg>;
+const Globe = ({ style }) => <Svg style={style}><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20" /></Svg>;
+const LogOut = ({ style }) => <Svg style={style}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></Svg>;
+
+/* ============================ constants ============================ */
+const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+const DOW = ["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
+
+const CATS = {
+  fun:      { label: "חברים / בילוי",   bg: "#7C3AED" },
+  work:     { label: "עבודה / לימודים", bg: "#E08368" },
+  personal: { label: "אישי",            bg: "#3B82F6" },
+  love:     { label: "יחד ❤️",          bg: "#EC4899" },
+};
+
+const C = { card: "#FFFFFF", ink: "#2B2533", muted: "#A29AA8", soft: "#FAF4F7", line: "#F0E2EA" };
+const SCRIPT = "'Gveret Levin', 'Rubik', system-ui, cursive";
+const BODY = "Rubik, system-ui, sans-serif";
+const MOOD_EMOJIS = ["😍","🥰","😊","😌","😎","😴","🥲","😤","🥳","💪"];
+const REACTIONS = ["❤️","😍","🥹","😂","🥰","🔥","👏"];
+
+const DAILY_QUESTIONS = [
+  "מה הדבר הקטן שעשיתי לאחרונה שגרם לך לחייך?",
+  "אם היינו טסים מחר לכל מקום בעולם — לאן?",
+  "מה הכי אהבת בנו השבוע?",
+  "איזו הרגשה ליוותה אותך היום?",
+  "מה משהו חדש שהיית רוצה שנתנסה בו יחד?",
+  "מתי הרגשת הכי קרוב/ה אליי לאחרונה?",
+  "מה הזיכרון האהוב עליך מאיתנו?",
+  "מה הדבר שאני עושה ואתה/את הכי מעריך/ה?",
+  "אם היה לנו יום חופשי מושלם יחד — איך הוא נראה?",
+  "מה היית רוצה שאדע עליך שאולי לא אמרת?",
+  "על מה אתה/את הכי גאה בעצמך החודש?",
+  "מה משהו קטן שאני יכול/ה לעשות שיעשה לך את היום?",
+  "איזה שיר מזכיר לך אותנו?",
+  "מה החלום שהכי בא לך שנגשים יחד?",
+  "מה הדבר שגרם לך להתאהב בי?",
+  "אם היינו פותחים עסק יחד — מה זה היה?",
+  "מה הכי הצחיק אותך לאחרונה?",
+  "מה משהו שאני אומר/ת שתמיד מרגיע אותך?",
+  "איזו מסורת קטנה היית רוצה שתהיה רק שלנו?",
+  "מה הכי אתה/את מצפה לו בתקופה הקרובה?",
+  "מה משהו שלמדת עליי השנה?",
+  "איפה אתה/את רואה אותנו בעוד חמש שנים?",
+  "מה הדבר שהכי גרם לך להרגיש אהוב/ה לאחרונה?",
+  "מה הארוחה שהיית רוצה שנבשל יחד?",
+  "מה משהו שאתה/את אסיר/ת תודה עליו היום?",
+  "איזה רגע קטן מהיום היית רוצה לשמר?",
+  "מה הדבר שאתה/את הכי אוהב/ת לעשות איתי בבית?",
+  "אם היית כותב/ת לי פתק אחד — מה היה כתוב בו?",
+  "איזו תכונה שלי הכי מושכת אותך?",
+  "מתי הרגשת הכי גאה בי?",
+  "מה הדבר שאני עושה בלי לשים לב ואתה/את אוהב/ת?",
+  "מה הרגע שבו ידעת שאתה/את רוצה אותי בחיים שלך?",
+  "מה הדייט הראשון שלנו גרם לך להרגיש?",
+  "איזה רגע קטן ביחד היית רוצה לחיות מחדש?",
+  "מה הצחוק הכי גדול שצחקנו יחד?",
+  "מה הטיול או היציאה שהכי נחרטו לך מאיתנו?",
+  "איזו תמונה שלנו הכי אהובה עליך, ולמה?",
+  "מה הדבר המפתיע ביותר שגיליתי עליך עם הזמן?",
+  "מה הרגע שהכי ריגש אותך מאיתנו?",
+  "אם היה לנו בית חלומות — איך הוא נראה?",
+  "מה דבר אחד שהיית רוצה שנעשה יחד השנה?",
+  "איזו הרפתקה גדולה היית רוצה שנצא אליה?",
+  "מה היית רוצה שנלמד לעשות יחד?",
+  "איזה מקום היית רוצה שנגור בו יום אחד?",
+  "מה היעד הבא ברשימת המשאלות הזוגית שלנו?",
+  "איך היית רוצה שנחגוג את יום השנה הבא?",
+  "מה משהו שהיית רוצה שנשמור עליו תמיד בקשר שלנו?",
+  "אם היה לנו שבוע חופשי לגמרי — מה היינו עושים?",
+  "איזה הרגל טוב היית רוצה שנאמץ כזוג?",
+  "מה היה השיא של היום שלך?",
+  "מה הדבר שהכי העסיק אותך היום?",
+  "על מה אתה/את הכי מצפה השבוע?",
+  "מה הדבר שאתה/את צריך/ה ממני השבוע?",
+  "איך אני יכול/ה לתמוך בך טוב יותר עכשיו?",
+  "מה הדבר שגרם לך להרגיש טוב היום?",
+  "מה הדבר הכי טוב שקרה לנו החודש?",
+  "מה משהו שאתה/את מעריך/ה בחיים שלנו יחד?",
+  "מי או מה גרם לך להרגיש מבורך/ת לאחרונה?",
+  "אם היינו דמויות בסרט — איזה סרט זה היה?",
+  "אם היו נותנים לנו כינוי זוגי — מה הוא היה?",
+  "תעדיף/י חופשה בים או בהרים — ולמה איתי?",
+  "אם היינו יכולים לאכול רק מטבח אחד לנצח — איזה?",
+  "איזו חיה הכי מתאימה לקשר שלנו?",
+  "אם היה לנו על-כוח משותף — מה הוא היה?",
+  "איזה כישרון היית רוצה שיהיה לי?",
+  "סרט או סדרה שהכי בא לך שנראה יחד עכשיו?",
+  "אם היינו יכולים לחיות בכל תקופה בהיסטוריה יחד — מתי?",
+  "איזה משחק או תחביב היית רוצה שנגלה יחד?",
+  "אם הקשר שלנו היה טעם של גלידה — איזה?",
+  "מה הדבר הכי משוגע שהיית רוצה שנעשה פעם אחת?",
+  "אם היינו עוברים לגור באי בודד — מה היית לוקח/ת?",
+  "מה גורם לך להרגיש הכי בטוח/ה איתי?",
+  "מתי אתה/את מרגיש/ה הכי מובן/ת על ידי?",
+  "איך נראתה אהבה בעיניך כשהיית ילד/ה?",
+  "מה הפחד הכי גדול שלך בקשר, ואיך אוכל לעזור?",
+  "מה משהו שלמדת על עצמך מאז שאנחנו יחד?",
+  "מתי אתה/את מרגיש/ה הכי קרוב/ה אליי רגשית?",
+  "מה הדבר שאתה/את הכי מעריך/ה בדרך שאנחנו פותרים מריבות?",
+  "מה גורם לך להרגיש אהוב/ה — מילים, מעשים, מגע, זמן או מתנות?",
+  "איזה חלק בקשר שלנו היית רוצה שנעמיק בו?",
+  "מה משהו שהיית רוצה שנדבר עליו יותר?",
+  "מתי הרגשת שעברנו יחד משהו קשה והתחזקנו?",
+  "מה הדבר שאני עושה שגורם לך להרגיש שאני ממש רואה אותך?",
+  "איך אתה/את אוהב/ת שמנחמים אותך ברגעים קשים?",
+  "מה הציפייה הכי חשובה שלך מאיתנו כזוג?",
+  "מה החיבוק או הנשיקה האהובה עליך מאיתנו?",
+  "מה הדבר הקטן שאני עושה שאתה/את הכי מתגעגע/ת אליו כשאני לא לידך?",
+  "איזה בוקר מושלם נראה לך איתי?",
+  "איזה ערב מושלם נראה לך איתנו?",
+  "מה הריח, השיר או הטעם שמזכיר לך אותי?",
+  "מה הדבר הכי רומנטי שעשינו יחד?",
+  "מה הדבר הכי רומנטי שהיית רוצה שנעשה?",
+  "איך היית מתאר/ת אותי לאדם שלא מכיר אותי?",
+  "מה שלוש מילים שמתארות אותנו?",
+  "מה הדבר שאתה/את הכי אוהב/ת בשגרת היומיום שלנו?",
+  "איזה הרגל שלי גורם לך לחייך?",
+  "מה הדבר שאתה/את מעריך/ה שאני עושה למען הקשר?",
+  "מתי לאחרונה אמרתי משהו שעשה לך טוב בלב?",
+  "מה היית רוצה שנשפר יחד בחודש הקרוב?",
+  "איזו מטרה אישית שלך הייתי רוצה לעזור לך להשיג?",
+  "מה משהו חדש שהיית רוצה שננסה החודש?",
+  "איך אתה/את רוצה שנרגיש בעוד שנה מהיום?",
+  "מה הדבר שהכי חשוב לך שנזכור כשקשה?",
+  "אם היו עושים עלינו סרט — מי היו השחקנים?",
+  "אם היה לנו יום בלי טלפונים — מה היינו עושים?",
+  "אם היינו זוכים בלוטו מחר — מה הדבר הראשון שנעשה יחד?",
+  "איזה אוכל הכי בא לך שנבשל יחד השבוע?",
+  "מה שיר שהיית בוחר/ת לריקוד הראשון שלנו?",
+  "אם היינו מתכננים יום הפתעה אחד לשני — מה שלך נראה?",
+  "איזה משחק בא לך שנשחק יחד?",
+  "אם היינו מאמצים חיה יחד — מה הייתה?",
+  "איזה מקום קרוב לבית עוד לא גילינו יחד?",
+  "מה הדבר שאתה/את הכי אוהב/ת בנו דווקא בימים רגילים?",
+  "מה הרגע השבוע שגרם לך להרגיש שאנחנו צוות?",
+  "מה הדבר שהיית רוצה להגיד לי ולא תמיד מוצא/ת זמן?",
+  "מה משהו שאני עושה שגורם לך להרגיש מיוחד/ת?",
+  "איזה זיכרון חדש היית רוצה שניצור החודש?",
+  "מה הופך יום רגיל ליום טוב כשאנחנו יחד?",
+  "מה הדבר הכי חשוב שלמדתי ממך?",
+  "אם היית צריך/ה לבחור בי שוב — למה היית בוחר/ת?",
+  "מה היית רוצה שנגיד אחד לשני יותר?",
+];
+
+const THEMES = {
+  sunset: { name: "שקיעה",
+    bg: "linear-gradient(180deg,#FDF1F4 0%,#FAEAF0 60%,#F6E7EE 100%)",
+    blobs: ["#FFD8C2","#E9DCFF","#FFD3E4"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(255,232,178,.85) 0%, rgba(255,232,178,0) 42%), linear-gradient(140deg,#FF9F5A 0%,#FB6F7F 55%,#EE4F6E 100%)",
+    heroShadow: "rgba(238,79,110,.75)", cta: "linear-gradient(95deg,#EC4899,#7C3AED)",
+    icon: "linear-gradient(135deg,#FBCFE8,#F472B6)", accent: "#DB2777", swatch: "#FB6F7F" },
+  ocean: { name: "אוקיינוס",
+    bg: "linear-gradient(180deg,#EEF7FB 0%,#E7F1FA 60%,#E6EEF8 100%)",
+    blobs: ["#BFE3F5","#CFE0FF","#C2F0E8"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(186,230,253,.85) 0%, rgba(186,230,253,0) 42%), linear-gradient(140deg,#22B8CF 0%,#3B82F6 55%,#6366F1 100%)",
+    heroShadow: "rgba(59,130,246,.7)", cta: "linear-gradient(95deg,#0EA5E9,#6366F1)",
+    icon: "linear-gradient(135deg,#A5D8FF,#3B82F6)", accent: "#0284C7", swatch: "#3B82F6" },
+  meadow: { name: "אחו",
+    bg: "linear-gradient(180deg,#F0F8EE 0%,#EAF4E6 60%,#E7F1E2 100%)",
+    blobs: ["#CDEBC0","#DFF3D0","#FBF0C9"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(217,245,196,.85) 0%, rgba(217,245,196,0) 42%), linear-gradient(140deg,#34D399 0%,#10B981 55%,#0D9488 100%)",
+    heroShadow: "rgba(16,185,129,.6)", cta: "linear-gradient(95deg,#10B981,#0D9488)",
+    icon: "linear-gradient(135deg,#BBF7D0,#10B981)", accent: "#059669", swatch: "#10B981" },
+  dusk: { name: "דמדומים",
+    bg: "linear-gradient(180deg,#F2EEFB 0%,#EDE7F8 60%,#EAE6F6 100%)",
+    blobs: ["#D8C9F5","#E9D6FF","#FAD0E8"],
+    hero: "radial-gradient(120% 130% at 12% 0%, rgba(221,214,254,.85) 0%, rgba(221,214,254,0) 42%), linear-gradient(140deg,#8B5CF6 0%,#7C3AED 55%,#DB2777 100%)",
+    heroShadow: "rgba(124,58,237,.7)", cta: "linear-gradient(95deg,#8B5CF6,#DB2777)",
+    icon: "linear-gradient(135deg,#DDD6FE,#8B5CF6)", accent: "#7C3AED", swatch: "#8B5CF6" },
+};
+
+/* ============================ helpers ============================ */
+const uid = () => Math.random().toString(36).slice(2, 9);
+const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const isoOf = (dt) => iso(dt.getFullYear(), dt.getMonth(), dt.getDate());
+const pad = (n) => String(n).padStart(2, "0");
+
+function fmtHMS(ms) {
+  if (ms < 0) ms = 0;
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+const timeLabel = (ts) => new Date(ts).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+function calcStreak(dates) {
+  const set = new Set(dates || []);
+  let n = 0; const d = new Date();
+  if (!set.has(isoOf(d))) d.setDate(d.getDate() - 1);
+  while (set.has(isoOf(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+function wxInfo(code) {
+  if (code === 0) return ["☀️", "בהיר"];
+  if (code <= 3) return ["⛅", "מעונן חלקית"];
+  if (code === 45 || code === 48) return ["🌫️", "ערפל"];
+  if (code >= 51 && code <= 67) return ["🌧️", "גשם"];
+  if (code >= 71 && code <= 77) return ["❄️", "שלג"];
+  if (code >= 80 && code <= 82) return ["🌦️", "ממטרים"];
+  if (code >= 95) return ["⛈️", "סופת רעמים"];
+  return ["🌡️", ""];
+}
+async function loadWeather(city) {
+  const g = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=he&format=json`).then((r) => r.json());
+  const loc = g.results && g.results[0];
+  if (!loc) return null;
+  const f = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weather_code&timezone=auto`).then((r) => r.json());
+  return { name: loc.name, tz: loc.timezone, temp: Math.round(f.current && f.current.temperature_2m), code: f.current && f.current.weather_code };
+}
+
+let _webpOK = null;
+function supportsWebp() {
+  if (_webpOK !== null) return _webpOK;
+  try { const c = document.createElement("canvas"); c.width = c.height = 1; _webpOK = c.toDataURL("image/webp").indexOf("data:image/webp") === 0; }
+  catch { _webpOK = false; }
+  return _webpOK;
+}
+function approxBytes(durl) { const i = durl.indexOf(","); return Math.ceil((durl.length - i - 1) * 0.75); }
+
+/* Compresses an image as small as possible while keeping it viewable on a phone.
+   Prefers WebP (much smaller), falls back to JPEG. Shrinks quality first, then
+   dimensions, until the result fits the byte budget (default ~50KB). */
+function fileToDataURL(file, opts = {}) {
+  const maxDim = opts.maxDim || 1000;
+  const budget = opts.budgetBytes || 90 * 1024;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const type = supportsWebp() ? "image/webp" : "image/jpeg";
+        const render = (dim, q) => {
+          const scale = Math.min(1, dim / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const cv = document.createElement("canvas");
+          cv.width = w; cv.height = h;
+          cv.getContext("2d").drawImage(img, 0, 0, w, h);
+          return cv.toDataURL(type, q);
+        };
+        try {
+          let best = render(maxDim, 0.7);
+          for (const q of [0.7, 0.6, 0.5, 0.42, 0.35]) {
+            best = render(maxDim, q);
+            if (approxBytes(best) <= budget) return resolve(best);
+          }
+          for (const d of [520, 460, 400, 340, 280]) {
+            best = render(d, 0.42);
+            if (approxBytes(best) <= budget) return resolve(best);
+          }
+          resolve(best);
+        } catch { resolve(e.target.result); }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function translateAuthError(e) {
+  const c = (e && e.code) || "";
+  if (c.includes("invalid-email")) return "כתובת אימייל לא תקינה";
+  if (c.includes("missing-password")) return "חסרה סיסמה";
+  if (c.includes("weak-password")) return "הסיסמה צריכה להיות לפחות 6 תווים";
+  if (c.includes("email-already-in-use")) return "המייל כבר רשום — נסו להתחבר במקום";
+  if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "אימייל או סיסמה שגויים";
+  if (c.includes("too-many-requests")) return "יותר מדי ניסיונות, נסו שוב מאוחר יותר";
+  if (c.includes("network")) return "אין חיבור לאינטרנט";
+  return "שגיאה: " + ((e && e.message) || c || "לא ידוע");
+}
+
+/* ============================ seed + normalize ============================ */
+function buildSeed() {
+  return {
+    names: { a: "", b: "" },
+    theme: "sunset",
+    longDistance: false,
+    people: { a: { city: "" }, b: { city: "" } },
+    anniversary: null,
+    moods: { a: { date: "", emoji: "" }, b: { date: "", emoji: "" } },
+    activityDates: [],
+    features: { countdowns: true, keepsakes: true, dreams: true, watchlist: true, reminders: true, roulette: true, dailyQ: true, onThisDay: true },
+    ntfyOn: false,
+    ntfyTopic: "",
+    dailyAnswers: {},
+    roulette: ["מי בוחר סרט 🎬", "מי מכין ארוחה 🍳", "נשיקה 💋", "חיבוק גדול 🤗", "מי שוטף כלים 🧽", "10 דק׳ עיסוי 💆"],
+    countdowns: [],
+    letters: [],
+    reminders: [],
+    events: [],
+    dreams: [],
+    watchlist: [],
+  };
+}
+
+function normalize(d) {
+  const s = buildSeed();
+  if (!d || typeof d !== "object") return s;
+  const out = { ...s, ...d };
+  out.names = { ...s.names, ...(d.names || {}) };
+  out.people = { a: { ...(d.people && d.people.a) }, b: { ...(d.people && d.people.b) } };
+  out.moods = d.moods || s.moods;
+  out.reminders = d.reminders || [];
+  out.dreams = d.dreams || [];
+  out.watchlist = d.watchlist || [];
+  out.events = d.events || [];
+  out.letters = (d.letters || []).map((l) => ({ reaction: null, ...l }));
+  out.activityDates = d.activityDates || [];
+  out.theme = THEMES[d.theme] ? d.theme : "sunset";
+  out.longDistance = !!d.longDistance;
+  out.features = { ...s.features, ...(d.features || {}) };
+  out.ntfyOn = !!d.ntfyOn;
+  out.ntfyTopic = d.ntfyTopic || "";
+  out.roulette = Array.isArray(d.roulette) ? d.roulette : s.roulette;
+  out.dailyAnswers = (d.dailyAnswers && typeof d.dailyAnswers === "object") ? d.dailyAnswers : {};
+  if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
+  else out.countdowns = d.countdowns;
+  return out;
+}
+
+/* ============================ atoms ============================ */
+function Card({ children, className = "", style = {}, ...rest }) {
+  return (
+    <div className={`rounded-3xl ${className}`}
+      style={{ background: C.card, border: `1px solid ${C.line}`, boxShadow: "0 14px 34px -20px rgba(200,90,130,.30)", ...style }} {...rest}>
+      {children}
+    </div>
+  );
+}
+function RoundBtn({ children, onClick, disabled, className = "", style = {} }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`grid place-items-center rounded-full transition active:scale-95 ${className}`} style={style}>
+      {children}
+    </button>
+  );
+}
+function Modal({ children, onClose, accent = "#EC4899" }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-3"
+      style={{ background: "rgba(40,20,30,.40)", backdropFilter: "blur(5px)", fontFamily: BODY }} onClick={onClose} dir="rtl">
+      <div className="w-full overflow-y-auto rounded-3xl bg-white"
+        style={{ maxWidth: 430, maxHeight: "90vh", boxShadow: "0 26px 64px -20px rgba(150,40,80,.55)", border: `2px solid ${accent}22` }}
+        onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+const Label = ({ children }) => (<div className="font-semibold mb-1.5" style={{ fontSize: 13, color: C.muted }}>{children}</div>);
+const inputCls = "w-full rounded-2xl px-4 py-3 outline-none transition";
+const inputStyle = { fontSize: 15, background: C.soft, border: "1.5px solid #F0DCE4", color: C.ink };
+const closeBtnStyle = { background: "#F4EEF1" };
+
+function Section({ icon, iconBg, title, badge, badgeColor, headerBg, open, onToggle, children }) {
+  return (
+    <Card className="fade-up overflow-hidden">
+      <button onClick={onToggle} className="w-full p-3.5 flex items-center gap-3" style={{ background: headerBg || "#fff" }}>
+        <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 42, height: 42, background: iconBg || C.soft }}>{icon}</div>
+        <div className="flex-1 text-center"><div className="font-extrabold" style={{ fontSize: 17, color: C.ink }}>{title}</div></div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {badge != null && (
+            <span className="flex items-center gap-1 rounded-full px-2.5 py-1 bg-white" style={{ border: `1px solid ${C.line}` }}>
+              <span className="rounded-full" style={{ width: 7, height: 7, background: badgeColor || "#60A5FA" }} />
+              <span className="font-bold" style={{ fontSize: 11, color: badgeColor || "#3B82F6" }}>{badge}</span>
+            </span>
+          )}
+          <ChevronLeft style={{ width: 18, height: 18, color: C.muted, transform: open ? "rotate(-90deg)" : "none", transition: "transform .2s" }} />
+        </div>
+      </button>
+      {open && <div className="p-3 pt-0 space-y-2">{children}</div>}
+    </Card>
+  );
+}
+
+function ListRow({ text, done, onToggle, onDelete, doneColor = "#22C55E" }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: C.soft }}>
+      <button onClick={onToggle} className="rounded-full grid place-items-center shrink-0 transition"
+        style={done ? { width: 24, height: 24, background: doneColor } : { width: 24, height: 24, border: "2px solid #D6C2CC" }}>
+        {done && <Check style={{ width: 16, height: 16, color: "#fff" }} />}
+      </button>
+      <span className={`flex-1 ${done ? "line-through" : ""}`} style={{ fontSize: 14, color: done ? C.muted : C.ink }}>{text}</span>
+      <button onClick={onDelete} className="shrink-0"><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+    </div>
+  );
+}
+function AddRow({ value, onChange, onAdd, placeholder, grad }) {
+  return (
+    <div className="flex gap-2">
+      <input value={value} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onAdd()} placeholder={placeholder} className={inputCls} style={inputStyle} />
+      <RoundBtn onClick={onAdd} className="shrink-0 text-white" style={{ width: 48, background: grad }}><Plus style={{ width: 20, height: 20 }} /></RoundBtn>
+    </div>
+  );
+}
+
+/* ============================ forms ============================ */
+function WriteLetterForm({ from, names, onSave, onClose }) {
+  const [text, setText] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [dur, setDur] = useState(24);
+  const [sealed, setSealed] = useState(false);
+  const [openDate, setOpenDate] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const fileRef = useRef(null);
+  const accent = from === "b" ? "#EC4899" : "#3B82F6";
+  const keep = dur === 0;
+  const tomorrow = isoOf(new Date(Date.now() + 864e5));
+  async function pick(e) { const f = e.target.files && e.target.files[0]; if (!f) return; setBusy(true); setErr(""); try { setPhoto(await fileToDataURL(f)); } catch { setErr("לא הצלחנו לטעון את התמונה"); } finally { setBusy(false); } }
+  function submit() {
+    if (!text.trim()) return;
+    if (sealed) {
+      if (!openDate) { setErr("בחרו תאריך פתיחה"); return; }
+      const openAt = new Date(openDate + "T08:00:00").getTime();
+      if (isNaN(openAt) || openAt <= Date.now()) { setErr("בחרו תאריך עתידי"); return; }
+      onSave({ id: uid(), from, text: text.trim(), photo: null, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
+    } else {
+      onSave({ id: uid(), from, text: text.trim(), photo: keep ? null : photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
+    }
+  }
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Heart style={{ width: 20, height: 20, fill: accent, color: accent }} />
+          <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>מכתב חדש מ{names[from]}</span>
+        </div>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>מה רצית להגיד? 💌</Label>
+      <textarea autoFocus rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="כתבו משהו מתוק…" className={inputCls + " resize-none mb-4 leading-relaxed"} style={inputStyle} />
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <button onClick={() => setSealed(false)} className="rounded-2xl py-2.5 font-bold transition active:scale-95" style={!sealed ? { fontSize: 13, background: accent, color: "#fff" } : { fontSize: 13, background: "#F6EEF2", color: C.muted }}>💌 מכתב רגיל</button>
+        <button onClick={() => setSealed(true)} className="rounded-2xl py-2.5 font-bold transition active:scale-95" style={sealed ? { fontSize: 13, background: "#7C3AED", color: "#fff" } : { fontSize: 13, background: "#F6EEF2", color: C.muted }}>🔒 מכתב חתום</button>
+      </div>
+
+      {!sealed && (<>
+        <Label>תמונה (לא חובה)</Label>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pick} />
+        {photo ? (
+          <div className="relative mb-3">
+            <img src={photo} alt="" className="w-full rounded-2xl object-cover" style={{ maxHeight: 240 }} />
+            <RoundBtn onClick={() => setPhoto(null)} className="w-8 h-8 absolute top-2 left-2" style={{ background: "rgba(0,0,0,.5)" }}><X style={{ width: 16, height: 16, color: "#fff" }} /></RoundBtn>
+          </div>
+        ) : (
+          <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full mb-3 rounded-2xl py-4 grid place-items-center gap-1 transition active:scale-95" style={{ border: "1.5px dashed #E7C6D2", background: "#FBF4F7", color: accent }}>
+            <ImagePlus style={{ width: 24, height: 24 }} />
+            <span className="font-semibold" style={{ fontSize: 13 }}>{busy ? "טוען…" : "הוספת תמונה"}</span>
+          </button>
+        )}
+        <Label>נעלם אחרי</Label>
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[{ v: 12, l: "12 שעות" }, { v: 24, l: "24 שעות" }, { v: 48, l: "יומיים" }, { v: 0, l: "לתמיד" }].map((o) => (
+            <button key={o.v} onClick={() => setDur(o.v)} className="rounded-xl py-2.5 font-bold transition active:scale-95"
+              style={dur === o.v ? { fontSize: 12.5, background: accent, color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.muted }}>{o.l}</button>
+          ))}
+        </div>
+        {keep && photo && <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#9A7B2E", background: "#FFF8E8", border: "1px solid #FCE5BD" }}>מכתב "לתמיד" נשמר במזכרות — הטקסט יישמר, אך התמונה לא 💛</div>}
+      </>)}
+
+      {sealed && (<>
+        <Label>נפתח בתאריך 🔒</Label>
+        <input type="date" min={tomorrow} value={openDate} onChange={(e) => setOpenDate(e.target.value)} className={inputCls + " mb-2"} style={inputStyle} />
+        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול לשניכם עד התאריך שתבחרו, ואז ייפתח אוטומטית. (תמונה לא נשמרת במכתב חתום)</div>
+      </>)}
+      {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
+      <button disabled={!text.trim()} onClick={submit}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>שליחת המכתב 💗</button>
+    </div>
+  );
+}
+
+function EventForm({ presetDate, onSave, onClose }) {
+  const [title, setTitle] = useState("");
+  const [cat, setCat] = useState("fun");
+  const [date, setDate] = useState(presetDate);
+  const [time, setTime] = useState("");
+  const [notifyMin, setNotifyMin] = useState(0);
+  const NOTIFY_OPTS = [[0, "בזמן עצמו"], [10, "10 דק׳ לפני"], [30, "30 דק׳ לפני"], [60, "שעה לפני"], [1440, "יום לפני"]];
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>אירוע חדש 🗓️</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>מה קורה?</Label>
+      <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="לדוגמה: ארוחת ערב בחוץ" className={inputCls + " mb-4"} style={inputStyle} />
+      <div className="flex gap-2 mb-3">
+        <div className="flex-1"><Label>תאריך</Label><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} style={inputStyle} /></div>
+        <div className="flex-1"><Label>שעה (לא חובה)</Label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} style={inputStyle} /></div>
+      </div>
+      {time && (
+        <div className="mb-3">
+          <Label>מתי לקבל התראה?</Label>
+          <div className="flex flex-wrap gap-2">
+            {NOTIFY_OPTS.map(([m, lbl]) => (
+              <button key={m} onClick={() => setNotifyMin(m)} className="rounded-2xl px-3 py-2 font-bold transition active:scale-95"
+                style={notifyMin === m ? { fontSize: 12.5, background: "#7C3AED", color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.ink }}>{lbl}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
+        <span style={{ fontSize: 14 }}>🔔</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>אם תבחר שעה ו"התראות לטלפון" מופעלות בהגדרות — תקבלו התראה לטלפון במועד שבחרתם, גם כשהיומן סגור.</span>
+      </div>
+      <Label>סוג</Label>
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        {Object.entries(CATS).map(([k, c]) => (
+          <button key={k} onClick={() => setCat(k)} className="flex items-center gap-2 rounded-2xl px-3 py-3 font-bold transition active:scale-95"
+            style={cat === k ? { fontSize: 13.5, background: c.bg, color: "#fff" } : { fontSize: 13.5, background: "#F6EEF2", color: C.ink }}>
+            <span className="rounded-full" style={{ width: 12, height: 12, background: cat === k ? "#fff" : c.bg }} />{c.label}
+          </button>
+        ))}
+      </div>
+      <button disabled={!title.trim()} onClick={() => onSave({ id: uid(), date, title: title.trim(), cat, time: time || "", at: time ? new Date(date + "T" + time).toISOString() : null, notifyMin: time ? notifyMin : 0 })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#7C3AED,#3B6BFF)" }}>הוספה ללוח</button>
+    </div>
+  );
+}
+
+function CountdownForm({ current, names, defaultBy, onSave, onDelete, onClose }) {
+  const editing = !!(current && current.id);
+  const [title, setTitle] = useState((current && current.title) || "");
+  const [emoji, setEmoji] = useState((current && current.emoji) || "😍");
+  const [setBy, setSetBy] = useState((current && current.setBy) || defaultBy);
+  const init = current && current.date ? new Date(current.date) : new Date(Date.now() + 7 * 864e5);
+  const [dt, setDt] = useState(`${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}T${pad(init.getHours())}:${pad(init.getMinutes())}`);
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>{editing ? "עריכת ספירה ⏳" : "ספירה חדשה 🎉"}</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <div className="flex gap-2 mb-4">
+        <div className="flex-1"><Label>האירוע</Label>
+          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="טיול / יום נישואין…" className={inputCls} style={inputStyle} /></div>
+        <div style={{ width: 80 }}><Label>אימוג׳י</Label>
+          <input value={emoji} onChange={(e) => setEmoji(e.target.value)} className={inputCls + " text-center"} style={{ ...inputStyle, fontSize: 22 }} /></div>
+      </div>
+      <Label>מתי?</Label>
+      <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>נקבע ע״י</Label>
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        {["a", "b"].map((p) => (
+          <button key={p} onClick={() => setSetBy(p)} className="rounded-2xl py-3 font-bold transition active:scale-95"
+            style={setBy === p ? { fontSize: 14, background: p === "b" ? "#EC4899" : "#3B82F6", color: "#fff" } : { fontSize: 14, background: "#F6EEF2", color: C.ink }}>{names[p]}</button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        {editing && (
+          <RoundBtn onClick={() => onDelete(current.id)} className="shrink-0" style={{ width: 56, height: 56, background: "#FDECEC" }}><Trash2 style={{ width: 20, height: 20, color: "#EF4444" }} /></RoundBtn>
+        )}
+        <button disabled={!title.trim()} onClick={() => onSave({ id: current && current.id, title: title.trim(), emoji: emoji || "✨", setBy, date: new Date(dt).toISOString() })}
+          className="flex-1 rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#FB923C,#EF4444)" }}>שמירה</button>
+      </div>
+    </div>
+  );
+}
+
+function sendNtfy(topic, message) {
+  if (!topic) return;
+  try {
+    fetch("https://ntfy.sh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, title: "היומן שלנו ❤️", message: message || "", tags: ["love_letter"] }),
+    }).catch(function () {});
+  } catch (e) {}
+}
+
+function scheduleNtfy(topic, fireAtMs, message) {
+  if (!topic) return;
+  try {
+    fetch("https://ntfy.sh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, title: "היומן שלנו ❤️", message: message || "", tags: ["bell"], delay: String(Math.round(fireAtMs / 1000)) }),
+    }).catch(function () {});
+  } catch (e) {}
+}
+
+function ReminderForm({ onSave, onClose }) {
+  const [text, setText] = useState("");
+  const init = new Date(Date.now() + 36e5);
+  const [dt, setDt] = useState(`${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}T${pad(init.getHours())}:${pad(init.getMinutes())}`);
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>תזכורת חדשה 🔔</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <Label>על מה להזכיר?</Label>
+      <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="לדוגמה: להתקשר לאמא 💛" className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>מתי?</Label>
+      <input type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} className={inputCls + " mb-3"} style={inputStyle} />
+      <div className="mb-4 rounded-2xl px-3 py-2 flex items-start gap-2" style={{ background: "#FFF8E8", border: "1px solid #FCE5BD" }}>
+        <span style={{ fontSize: 14 }}>🔔</span>
+        <span style={{ fontSize: 12, color: "#9A7B2E", lineHeight: 1.5 }}>אם "התראות לטלפון" מופעלות בהגדרות — תקבלו התראה לטלפון בזמן שקבעתם, גם כשהיומן סגור.</span>
+      </div>
+      <button disabled={!text.trim()} onClick={() => onSave({ id: uid(), text: text.trim(), at: new Date(dt).toISOString(), fired: false })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}>שמירת תזכורת</button>
+    </div>
+  );
+}
+
+function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, coupleId, onTestNtfy, email, onResetPassword, onSave, onClose }) {
+  const [a, setA] = useState(names.a);
+  const [b, setB] = useState(names.b);
+  const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
+  const [th, setTh] = useState(theme);
+  const [ld, setLd] = useState(longDistance);
+  const [cityA, setCityA] = useState((people && people.a && people.a.city) || "");
+  const [cityB, setCityB] = useState((people && people.b && people.b.city) || "");
+  const [feat, setFeat] = useState({ ...(features || {}) });
+  const [ntOn, setNtOn] = useState(!!ntfyOn);
+  const [ntTopic, setNtTopic] = useState(ntfyTopic || "");
+  const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const copyCode = () => { try { navigator.clipboard.writeText(coupleId || ""); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500); } catch (e) {} };
+  const [pwMsg, setPwMsg] = useState("");
+  const toggleFeat = (k) => setFeat((f) => ({ ...f, [k]: !f[k] }));
+  const FEATS = [["dailyQ", "שאלה יומית 💌"], ["onThisDay", "ביום הזה 📅"], ["countdowns", "ספירה לאחור ⏳"], ["keepsakes", "מזכרות ⭐"], ["dreams", "רשימת חלומות ☁️"], ["watchlist", "רשימת צפייה 🎬"], ["reminders", "תזכורות 🔔"], ["roulette", "רולטה 🎡"]];
+  const toggleNtfy = () => setNtOn((v) => { const nv = !v; if (nv && !ntTopic) setNtTopic("yomanzugi-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)); return nv; });
+  const copyTopic = () => { try { navigator.clipboard.writeText(ntTopic); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {} };
+  async function resetPw() { setPwMsg("שולח…"); const ok = await onResetPassword(); setPwMsg(ok ? "נשלח מייל לאיפוס הסיסמה — בדקו את תיבת הדואר" : "שגיאה בשליחה, נסו שוב"); }
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-extrabold" style={{ fontSize: 18, color: C.ink }}>ההגדרות שלנו ⚙️</span>
+        <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+      </div>
+      <div className="mb-5 rounded-2xl p-3" style={{ background: "#FBF1F7", border: "1px solid #F3D9E8" }}>
+        <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>💞</span><span className="font-extrabold" style={{ fontSize: 13, color: "#A21D6E" }}>קוד הזוג שלכם</span></div>
+        <div style={{ fontSize: 12, color: "#9B5478", lineHeight: 1.6, marginBottom: 8 }}>שלחו את הקוד לבן/בת הזוג — הוא/היא ייכנס/תיכנס עם החשבון שלו/ה ויבחר/תבחר "הצטרפות עם קוד".</div>
+        <div className="flex items-center gap-2">
+          <input readOnly value={coupleId || ""} className={inputCls} style={{ ...inputStyle, direction: "ltr", textAlign: "left", fontSize: 13, fontWeight: 700 }} />
+          <button onClick={copyCode} className="shrink-0 rounded-2xl px-3 py-2 font-bold text-white" style={{ fontSize: 12.5, background: "#EC4899" }}>{codeCopied ? "הועתק ✓" : "העתק"}</button>
+        </div>
+      </div>
+
+      <Label>השמות שלנו</Label>
+      <div className="flex gap-2 mb-4">
+        <input value={a} onChange={(e) => setA(e.target.value)} className={inputCls} style={inputStyle} />
+        <input value={b} onChange={(e) => setB(e.target.value)} className={inputCls} style={inputStyle} />
+      </div>
+      <Label>מתי התחלנו להיות יחד? ❤️</Label>
+      <input type="date" value={ann} onChange={(e) => setAnn(e.target.value)} className={inputCls + " mb-4"} style={inputStyle} />
+      <Label>ערכת צבעים 🎨</Label>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {Object.entries(THEMES).map(([k, t]) => (
+          <button key={k} onClick={() => setTh(k)} className="flex items-center gap-2 rounded-2xl px-3 py-3 font-bold transition active:scale-95"
+            style={th === k ? { fontSize: 14, background: t.swatch, color: "#fff" } : { fontSize: 14, background: "#F6EEF2", color: C.ink }}>
+            <span className="rounded-full" style={{ width: 14, height: 14, background: th === k ? "#fff" : t.swatch }} />{t.name}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setLd((v) => !v)} className="w-full flex items-center justify-between rounded-2xl px-4 py-3 mb-3" style={{ background: C.soft }}>
+        <div className="flex items-center gap-2"><Globe style={{ width: 18, height: 18, color: "#3B82F6" }} /><span className="font-bold" style={{ fontSize: 14, color: C.ink }}>מצב מרחק (שעון ומזג אוויר)</span></div>
+        <span className="rounded-full transition" style={{ width: 44, height: 26, background: ld ? "#22C55E" : "#D6C2CC", position: "relative" }}>
+          <span className="rounded-full" style={{ position: "absolute", top: 3, right: ld ? 3 : 21, width: 20, height: 20, background: "#fff", transition: "right .2s" }} />
+        </span>
+      </button>
+      {ld && (
+        <div className="flex gap-2 mb-5">
+          <div className="flex-1"><Label>העיר של {a || "ראשון"}</Label><input value={cityA} onChange={(e) => setCityA(e.target.value)} placeholder="תל אביב" className={inputCls} style={inputStyle} /></div>
+          <div className="flex-1"><Label>העיר של {b || "שני"}</Label><input value={cityB} onChange={(e) => setCityB(e.target.value)} placeholder="ברלין" className={inputCls} style={inputStyle} /></div>
+        </div>
+      )}
+
+      <Label>פיצ'רים שמוצגים</Label>
+      <div className="space-y-2 mb-5">
+        {FEATS.map(([k, label]) => (
+          <button key={k} onClick={() => toggleFeat(k)} className="w-full flex items-center justify-between rounded-2xl px-4 py-2.5" style={{ background: C.soft }}>
+            <span className="font-bold" style={{ fontSize: 13.5, color: C.ink }}>{label}</span>
+            <span className="rounded-full transition" style={{ width: 44, height: 26, background: feat[k] ? "#22C55E" : "#D6C2CC", position: "relative" }}>
+              <span className="rounded-full" style={{ position: "absolute", top: 3, right: feat[k] ? 3 : 21, width: 20, height: 20, background: "#fff", transition: "right .2s" }} />
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <Label>התראות לטלפון 📲</Label>
+      <button onClick={toggleNtfy} className="w-full flex items-center justify-between rounded-2xl px-4 py-2.5 mb-2" style={{ background: C.soft }}>
+        <span className="font-bold" style={{ fontSize: 13.5, color: C.ink }}>שלח התראה לטלפון בכל מכתב חדש</span>
+        <span className="rounded-full transition" style={{ width: 44, height: 26, background: ntOn ? "#22C55E" : "#D6C2CC", position: "relative" }}>
+          <span className="rounded-full" style={{ position: "absolute", top: 3, right: ntOn ? 3 : 21, width: 20, height: 20, background: "#fff", transition: "right .2s" }} />
+        </span>
+      </button>
+      {ntOn && (
+        <div className="mb-5 rounded-2xl p-3" style={{ background: "#F3F7FF", border: "1px solid #D9E6FF" }}>
+          <div style={{ fontSize: 12, color: "#3B5B8C", lineHeight: 1.6 }}>
+            כדי לקבל את ההתראות גם כשהיומן סגור: שניכם מתקינים את האפליקציה <b>ntfy</b> (חינם, מ-App Store), ועוקבים אחרי הערוץ הסודי הבא (Subscribe → הדביקו את השם):
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <input readOnly value={ntTopic} className={inputCls} style={{ ...inputStyle, direction: "ltr", textAlign: "left", fontSize: 13 }} />
+            <button onClick={copyTopic} className="shrink-0 rounded-2xl px-3 py-2 font-bold" style={{ fontSize: 12.5, background: "#3B82F6", color: "#fff" }}>{copied ? "הועתק ✓" : "העתק"}</button>
+          </div>
+          <button onClick={() => onTestNtfy && onTestNtfy(ntTopic)} className="w-full mt-2 rounded-2xl py-2.5 font-bold" style={{ fontSize: 13, background: "#fff", color: "#3B82F6", border: "1px solid #BFD4FF" }}>שליחת התראת בדיקה 🔔</button>
+          <div style={{ fontSize: 11, color: "#7E8AA0", marginTop: 6, lineHeight: 1.5 }}>שמרו את ההגדרות אחרי ההפעלה. שימו לב: הערוץ פרטי כל עוד השם נשאר סודי.</div>
+        </div>
+      )}
+
+      <button onClick={() => onSave({ names: { a: a.trim(), b: b.trim() }, anniversary: ann ? new Date(ann).toISOString() : anniversary, theme: th, longDistance: ld, people: { a: { city: cityA.trim() }, b: { city: cityB.trim() } }, features: feat, ntfyOn: ntOn, ntfyTopic: ntTopic })}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירה</button>
+
+      <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${C.line}` }}>
+        <Label>החשבון</Label>
+        {email && <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8, direction: "ltr", textAlign: "right" }}>{email}</div>}
+        <button onClick={resetPw} className="w-full rounded-2xl py-3 font-bold transition active:scale-95" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>שינוי סיסמה (שליחת מייל איפוס)</button>
+        {pwMsg && <div className="text-center mt-2" style={{ fontSize: 12.5, color: "#16A34A" }}>{pwMsg}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================ feature cards ============================ */
+function MoodCard({ names, moodA, moodB, open, onOpen, onPick }) {
+  const half = (p, emoji) => {
+    const c = p === "b" ? "#EC4899" : "#3B82F6";
+    return (
+      <button onClick={() => onOpen(p)} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-2xl transition active:scale-95" style={{ background: open === p ? `${c}12` : "transparent" }}>
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: c }}><Heart style={{ width: 10, height: 10, fill: "#fff", color: "#fff" }} /></span>
+          <span className="font-bold" style={{ fontSize: 13, color: C.ink }}>{names[p]}</span>
+        </div>
+        <span style={{ fontSize: emoji ? 34 : 24, lineHeight: 1 }}>{emoji || "➕"}</span>
+        <span style={{ fontSize: 10, color: C.muted }}>{emoji ? "היום" : "הוספת מצב רוח"}</span>
+      </button>
+    );
+  };
+  return (
+    <Card className="fade-up p-3" style={{ animationDelay: ".14s" }}>
+      <div className="text-center font-extrabold mb-1" style={{ fontSize: 14, color: C.ink }}>איך אנחנו מרגישים היום?</div>
+      <div className="flex items-stretch">
+        {half("a", moodA)}<div style={{ width: 1, background: C.line, margin: "8px 4px" }} />{half("b", moodB)}
+      </div>
+      {open && (
+        <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
+          {MOOD_EMOJIS.map((e) => (<button key={e} onClick={() => onPick(open, e)} className="shrink-0 rounded-2xl transition active:scale-90" style={{ fontSize: 24, width: 42, height: 42, background: C.soft }}>{e}</button>))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClose }) {
+  const accent = letter.from === "b" ? "#EC4899" : "#3B82F6";
+  const remaining = letter.createdAt + letter.durationHours * 3600000 - now;
+  const cardRef = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const [imgPreview, setImgPreview] = useState(null);
+  const dateStr = new Date(letter.createdAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" });
+  async function saveImage() {
+    if (saving || !window.html2canvas || !cardRef.current) return;
+    setSaving(true);
+    try {
+      const canvas = await window.html2canvas(cardRef.current, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+      const dataUrl = canvas.toDataURL("image/png");
+      const fname = "letter-" + new Date(letter.createdAt).toISOString().slice(0, 10) + ".png";
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+      if (blob && navigator.canShare) {
+        const file = new File([blob], fname, { type: "image/png" });
+        if (navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], title: "מכתב 💌" }); setSaving(false); return; }
+          catch (e) { if (e && e.name === "AbortError") { setSaving(false); return; } }
+        }
+      }
+      setImgPreview(dataUrl);
+    } catch (e) { console.error("save image failed", e); }
+    finally { setSaving(false); }
+  }
+  const locked = letter.openAt && letter.openAt > now;
+  if (locked) return (
+    <Modal onClose={onClose} accent="#7C3AED">
+      <div className="p-6 text-center">
+        <div style={{ fontSize: 44, marginBottom: 10 }}>🔒</div>
+        <div className="font-extrabold mb-1" style={{ fontSize: 18, color: C.ink }}>מכתב חתום מ{names[letter.from]}</div>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.6 }}>המכתב נעול וייפתח אוטומטית ב:</div>
+        <div className="font-extrabold mb-5" style={{ fontSize: 17, color: "#7C3AED" }}>{new Date(letter.openAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" })}</div>
+        <button onClick={onClose} className="w-full rounded-3xl py-3.5 text-white font-extrabold transition active:scale-95 mb-2" style={{ fontSize: 15, background: "linear-gradient(95deg,#7C3AED,#EC4899)" }}>סגירה</button>
+        <button onClick={onDelete} className="w-full rounded-2xl py-2.5 font-bold transition active:scale-95" style={{ fontSize: 13, background: "transparent", color: "#EF4444" }}>מחיקת המכתב החתום</button>
+      </div>
+    </Modal>
+  );
+  return (
+    <Modal onClose={onClose} accent={accent}>
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2"><Heart style={{ width: 22, height: 22, fill: accent, color: accent }} /><span style={{ fontFamily: SCRIPT, fontSize: 24, color: C.ink }}>מאת: {names[letter.from]}</span></div>
+          <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+        </div>
+        {letter.photo && <img src={letter.photo} alt="" className="w-full rounded-2xl object-cover mb-4" style={{ maxHeight: 360 }} />}
+        <p className="whitespace-pre-wrap mb-4" style={{ fontSize: 16.5, color: C.ink, lineHeight: 1.75 }}>{letter.text}</p>
+        <div className="flex items-center justify-center gap-1.5 mb-4" style={{ fontSize: 12.5, color: C.muted }}>
+          <Calendar style={{ width: 14, height: 14 }} /><span style={{ fontFamily: SCRIPT, fontSize: 14 }}>נוצר ביומן הזוגי של {names.a} ו{names.b} ❤️</span>
+        </div>
+        <div className="flex items-center justify-center gap-1.5 mb-4">
+          {REACTIONS.map((e) => (<button key={e} onClick={() => onReact(e)} className="rounded-full transition active:scale-90"
+            style={{ fontSize: 20, width: 38, height: 38, background: letter.reaction === e ? `${accent}22` : C.soft, border: letter.reaction === e ? `1.5px solid ${accent}` : "1.5px solid transparent" }}>{e}</button>))}
+        </div>
+        <button onClick={saveImage} disabled={saving} className="w-full flex items-center justify-center gap-2 rounded-2xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50 mb-3" style={{ fontSize: 14.5, background: `${accent}14`, color: accent, border: `1.5px solid ${accent}33` }}>
+          <ImageIcon style={{ width: 18, height: 18 }} />{saving ? "מכין תמונה…" : "שמירת המכתב כתמונה לגלריה"}
+        </button>
+        <div className="flex items-center justify-between gap-2">
+          <RoundBtn onClick={onDelete} className="w-11 h-11" style={{ background: "#FDECEC" }}><Trash2 style={{ width: 20, height: 20, color: "#EF4444" }} /></RoundBtn>
+          <button onClick={onKeepsake} disabled={letter.keepsake} className="flex items-center gap-2 rounded-2xl px-4 py-3 font-bold transition active:scale-95"
+            style={letter.keepsake ? { fontSize: 14, background: "#EAF7EE", color: "#16A34A" } : { fontSize: 14, background: "#EAF1FF", color: "#2563EB" }}>
+            {letter.keepsake ? <Check style={{ width: 16, height: 16 }} /> : <Camera style={{ width: 16, height: 16 }} />}{letter.keepsake ? "נשמר כמזכרת" : "שמור כמזכרת"}
+          </button>
+          <div className="flex items-center gap-1.5 rounded-2xl px-3 py-2.5" style={{ background: "#F6EEF2" }}>
+            <Clock style={{ width: 16, height: 16, color: C.muted }} /><span className="font-bold tabular-nums" style={{ fontSize: 12.5, color: letter.keepsake ? "#16A34A" : C.ink }}>{letter.keepsake ? "לתמיד" : `נותרו: ${fmtHMS(remaining)}`}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* hidden card rendered to an image when saving */}
+      <div ref={cardRef} dir="rtl" aria-hidden="true" style={{ position: "fixed", left: -99999, top: 0, width: 380, fontFamily: BODY, padding: 22, background: "linear-gradient(160deg,#FFE3D3 0%,#FBD7E4 100%)" }}>
+        <div style={{ background: "#fff", borderRadius: 26, padding: 26, borderTop: `6px solid ${accent}`, boxShadow: "0 18px 40px -20px rgba(150,40,80,.5)" }}>
+          <div style={{ textAlign: "center", fontFamily: SCRIPT, fontSize: 30, color: accent, lineHeight: 1.1 }}>מאת {names[letter.from]} 💌</div>
+          <div style={{ textAlign: "center", fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 18 }}>{dateStr}</div>
+          {letter.photo && <img src={letter.photo} alt="" style={{ width: "100%", borderRadius: 18, marginBottom: 18, display: "block" }} />}
+          <div style={{ whiteSpace: "pre-wrap", fontSize: 18, color: C.ink, lineHeight: 1.8, textAlign: "center" }}>{letter.text}</div>
+          {letter.reaction && <div style={{ textAlign: "center", fontSize: 30, marginTop: 16 }}>{letter.reaction}</div>}
+          <div style={{ textAlign: "center", marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.line}`, fontFamily: SCRIPT, fontSize: 17, color: "#C58AA0" }}>היומן של {names.a} ו{names.b} ❤️</div>
+        </div>
+      </div>
+
+      {imgPreview && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center p-4" dir="rtl"
+          style={{ background: "rgba(20,10,15,.85)", backdropFilter: "blur(6px)", zIndex: 9999 }}
+          onClick={() => setImgPreview(null)}>
+          <div className="rounded-2xl px-4 py-2 mb-3 text-center font-bold" onClick={(e) => e.stopPropagation()}
+            style={{ fontSize: 14, color: "#fff", background: "rgba(255,255,255,.14)", lineHeight: 1.5 }}>
+            לשמירה לגלריה: לחיצה ארוכה על התמונה ← בחרו <span style={{ whiteSpace: "nowrap" }}>"שמור תמונה" 📸</span>
+          </div>
+          <img src={imgPreview} alt="מכתב" onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "100%", maxHeight: "66vh", borderRadius: 18, boxShadow: "0 20px 50px -20px rgba(0,0,0,.6)" }} />
+          <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+            <a href={imgPreview} download="love-letter.png" className="rounded-full px-5 py-2.5 font-bold transition active:scale-95" style={{ fontSize: 13.5, background: "#fff", color: C.ink }}>הורדה למחשב</a>
+            <button onClick={() => setImgPreview(null)} className="rounded-full px-5 py-2.5 font-bold transition active:scale-95" style={{ fontSize: 13.5, background: "rgba(255,255,255,.18)", color: "#fff" }}>סגירה</button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+function LongDistanceCard({ people, names, now }) {
+  const [info, setInfo] = useState({ a: null, b: null });
+  const cacheRef = useRef({});
+  useEffect(() => {
+    let off = false;
+    ["a", "b"].forEach(async (p) => {
+      const city = people && people[p] && people[p].city && people[p].city.trim();
+      if (!city) { setInfo((s) => ({ ...s, [p]: null })); return; }
+      if (cacheRef.current[city]) { setInfo((s) => ({ ...s, [p]: cacheRef.current[city] })); return; }
+      try { const w = await loadWeather(city); if (w) { cacheRef.current[city] = w; if (!off) setInfo((s) => ({ ...s, [p]: w })); } } catch {}
+    });
+    return () => { off = true; };
+  }, [people && people.a && people.a.city, people && people.b && people.b.city]);
+  const half = (p) => {
+    const c = p === "b" ? "#EC4899" : "#3B82F6"; const w = info[p];
+    const time = w && w.tz ? new Date(now).toLocaleTimeString("he-IL", { timeZone: w.tz, hour: "2-digit", minute: "2-digit" }) : "—";
+    const wx = w && w.code != null ? wxInfo(w.code) : null;
+    return (
+      <div className="flex-1 flex flex-col items-center gap-0.5 py-1">
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: c }}><Heart style={{ width: 10, height: 10, fill: "#fff", color: "#fff" }} /></span>
+          <span className="font-bold" style={{ fontSize: 13, color: C.ink }}>{names[p]}</span>
+        </div>
+        <div className="font-black tabular-nums" style={{ fontSize: 26, color: C.ink }}>{time}</div>
+        <div style={{ fontSize: 12, color: C.muted }}>{w ? `${w.name}${wx ? ` · ${wx[0]} ${w.temp}°` : ""}` : (people && people[p] && people[p].city ? "טוען…" : "לא הוגדרה עיר")}</div>
+      </div>
+    );
+  };
+  return (
+    <Card className="fade-up p-3" style={{ animationDelay: ".15s" }}>
+      <div className="flex items-center justify-center gap-1.5 mb-1"><Globe style={{ width: 16, height: 16, color: "#3B82F6" }} /><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>גם כשרחוקים, אותו שמיים</span></div>
+      <div className="flex items-stretch">{half("a")}<div style={{ width: 1, background: C.line, margin: "6px 4px" }} />{half("b")}</div>
+    </Card>
+  );
+}
+
+/* ============================ splash + login ============================ */
+function Splash({ text }) {
+  return (
+    <div dir="rtl" style={{ minHeight: "100vh", background: THEMES.sunset.bg, fontFamily: BODY, display: "grid", placeItems: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <div className="floaty-css" style={{ fontSize: 56, marginBottom: 12 }}>❤️</div>
+        <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink }}>{text || "טוען…"}</div>
+      </div>
+      <style>{`@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}.floaty-css{animation:fl 1.6s ease-in-out infinite}`}</style>
+    </div>
+  );
+}
+
+function LoginScreen({ onSignIn, onSignUp, busy, error }) {
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const T = THEMES.sunset;
+  return (
+    <div dir="rtl" style={{ minHeight: "100vh", background: T.bg, fontFamily: BODY, display: "grid", placeItems: "center", padding: 16, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", bottom: -110, left: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+      <div className="rounded-3xl" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 380, background: "#fff", border: `1px solid ${C.line}`, boxShadow: "0 26px 64px -24px rgba(150,40,80,.45)", padding: 26 }}>
+        <div style={{ textAlign: "center", marginBottom: 18 }}>
+          <div className="grid place-items-center rounded-2xl" style={{ width: 60, height: 60, margin: "0 auto 12px", background: T.icon, boxShadow: `0 10px 22px -8px ${T.swatch}` }}>
+            <Heart style={{ width: 30, height: 30, fill: "#fff", color: "#fff" }} />
+          </div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 30, color: C.ink, lineHeight: 1.1 }}>היומן שלנו ❤️</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>התחברו עם החשבון האישי שלכם</div>
+        </div>
+        <Label>אימייל</Label>
+        <input type="email" autoCapitalize="none" autoCorrect="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" className={inputCls + " mb-3"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
+        <Label>סיסמה</Label>
+        <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && onSignIn(email.trim(), pw)} placeholder="לפחות 6 תווים" className={inputCls + " mb-4"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
+        {error && <div className="rounded-2xl px-4 py-3 mb-4 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{error}</div>}
+        <button disabled={busy} onClick={() => onSignIn(email.trim(), pw)} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={{ fontSize: 16, background: T.cta }}>
+          {busy ? "מתחבר…" : "התחברות"}
+        </button>
+        <button disabled={busy} onClick={() => onSignUp(email.trim(), pw)} className="w-full rounded-3xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>
+          יצירת חשבון חדש (פעם ראשונה)
+        </button>
+        <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 14, lineHeight: 1.6 }}>
+          טיפ: לכל אחד מכם חשבון אישי. אחרי ההתחברות תיצרו יומן משותף ותתחברו אליו עם קוד 💕
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VerifyScreen({ email, busy, msg, onResend, onCheck, onSignOut }) {
+  const T = THEMES.sunset;
+  return (
+    <div dir="rtl" style={{ minHeight: "100vh", background: T.bg, fontFamily: BODY, display: "grid", placeItems: "center", padding: 16, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", bottom: -110, left: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+      <div className="rounded-3xl" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 380, background: "#fff", border: `1px solid ${C.line}`, boxShadow: "0 26px 64px -24px rgba(150,40,80,.45)", padding: 26 }}>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div className="grid place-items-center rounded-2xl" style={{ width: 60, height: 60, margin: "0 auto 12px", background: T.icon, boxShadow: `0 10px 22px -8px ${T.swatch}` }}>
+            <Bell style={{ width: 28, height: 28, color: "#fff" }} />
+          </div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink, lineHeight: 1.1 }}>אימות אימייל ✉️</div>
+          <div style={{ fontSize: 13.5, color: C.muted, marginTop: 8, lineHeight: 1.6 }}>
+            שלחנו קישור אימות אל{email ? <><br /><span style={{ color: C.ink, fontWeight: 700, direction: "ltr", display: "inline-block" }}>{email}</span></> : " המייל שלכם"}.<br />
+            לחצו על הקישור במייל, ואז חזרו לכאן והקישו "כבר אישרתי".
+          </div>
+        </div>
+        {msg && <div className="rounded-2xl px-4 py-3 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FFF6E6", color: "#B45309" }}>{msg}</div>}
+        <button disabled={busy} onClick={onCheck} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={{ fontSize: 16, background: T.cta }}>
+          {busy ? "בודק…" : "כבר אישרתי — המשך"}
+        </button>
+        <button disabled={busy} onClick={onResend} className="w-full rounded-3xl py-3.5 font-bold transition active:scale-95 disabled:opacity-50 mb-2" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>
+          שליחת המייל שוב
+        </button>
+        <button onClick={onSignOut} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 13, background: "transparent", color: "#EF4444" }}>
+          התחברות עם חשבון אחר
+        </button>
+        <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
+          לא מוצאים את המייל? בדקו בתיקיית הספאם / קידומי מכירות.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkScreen({ busy, error, onCreate, onJoin, onSignOut }) {
+  const [mode, setMode] = useState(null);
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const T = THEMES.sunset;
+  const shell = { minHeight: "100vh", background: T.bg, fontFamily: BODY, display: "grid", placeItems: "center", padding: 16, position: "relative", overflow: "hidden" };
+  const cta = { fontSize: 16, background: T.cta };
+  return (
+    <div dir="rtl" style={shell}>
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", bottom: -110, left: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+      <div className="rounded-3xl" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 380, background: "#fff", border: `1px solid ${C.line}`, boxShadow: "0 26px 64px -24px rgba(150,40,80,.45)", padding: 26 }}>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div className="grid place-items-center rounded-2xl" style={{ width: 60, height: 60, margin: "0 auto 12px", background: T.icon, boxShadow: `0 10px 22px -8px ${T.swatch}` }}>
+            <Heart style={{ width: 30, height: 30, fill: "#fff", color: "#fff" }} />
+          </div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink, lineHeight: 1.1 }}>היומן הזוגי שלכם 💞</div>
+          <div style={{ fontSize: 13.5, color: C.muted, marginTop: 8, lineHeight: 1.6 }}>צרו יומן חדש, או הצטרפו ליומן של בן/בת הזוג עם קוד שתקבלו ממנו/ה</div>
+        </div>
+        {error && <div className="rounded-2xl px-4 py-3 mb-4 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{error}</div>}
+
+        {mode === null && (<>
+          <button onClick={() => { setMode("create"); }} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 mb-2" style={cta}>יצירת יומן חדש 💞</button>
+          <button onClick={() => { setMode("join"); }} className="w-full rounded-3xl py-3.5 font-bold transition active:scale-95" style={{ fontSize: 14, background: "#F6EEF2", color: C.ink }}>הצטרפות עם קוד</button>
+        </>)}
+
+        {mode === "create" && (<>
+          <Label>השם שלך</Label>
+          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="איך קוראים לך?" className={inputCls + " mb-4"} style={inputStyle} />
+          <button disabled={busy} onClick={() => onCreate(name)} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={cta}>{busy ? "יוצר…" : "צור יומן 💞"}</button>
+          <button onClick={() => setMode(null)} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 13, background: "#F6EEF2", color: C.ink }}>חזרה</button>
+        </>)}
+
+        {mode === "join" && (<>
+          <Label>קוד היומן</Label>
+          <input autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="הדביקו את הקוד שקיבלתם" className={inputCls + " mb-3"} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} />
+          <Label>השם שלך</Label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="איך קוראים לך?" className={inputCls + " mb-4"} style={inputStyle} />
+          <button disabled={busy} onClick={() => onJoin(code, name)} className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-50 mb-2" style={cta}>{busy ? "מצטרף…" : "הצטרפות 💞"}</button>
+          <button onClick={() => setMode(null)} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 13, background: "#F6EEF2", color: C.ink }}>חזרה</button>
+        </>)}
+
+        <button onClick={onSignOut} className="w-full rounded-3xl py-3 font-bold transition active:scale-95" style={{ fontSize: 12.5, background: "transparent", color: "#EF4444", marginTop: 10 }}>התנתקות</button>
+      </div>
+    </div>
+  );
+}
+
+function DailyQuestionCard({ question, myAns, partnerAns, meName, partnerName, meColor, partnerColor, onSave }) {
+  const [draft, setDraft] = useState("");
+  const answered = !!myAns;
+  const bothDone = !!myAns && !!partnerAns;
+  const box = (label, color, text) => (
+    <div className="rounded-2xl p-3" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color, marginBottom: 3 }}>{label}</div>
+      <div className="text-right" style={{ fontSize: 14, color: C.ink, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{text}</div>
+    </div>
+  );
+  return (
+    <Card className="fade-up p-4" style={{ animationDelay: ".07s", background: "linear-gradient(135deg,#FFF5F9,#F3F0FF)" }}>
+      <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 16 }}>💌</span><span className="font-extrabold" style={{ fontSize: 13, color: "#9D4EDD" }}>השאלה של היום</span></div>
+      <div className="text-right font-bold mb-3" style={{ fontSize: 16, color: C.ink, lineHeight: 1.4 }}>{question}</div>
+      {!answered && (<>
+        <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={2} placeholder="התשובה שלך…" className={inputCls} style={{ ...inputStyle, resize: "none" }} />
+        <button onClick={() => { if (draft.trim()) { onSave(draft.trim()); setDraft(""); } }} disabled={!draft.trim()} className="w-full mt-2 rounded-2xl py-3 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(95deg,#EC4899,#7C3AED)" }}>שמירת התשובה</button>
+        <div style={{ fontSize: 11.5, color: C.muted, textAlign: "center", marginTop: 8 }}>{partnerAns ? (partnerName + " כבר ענה/תה — ענה/י כדי לגלות 👀") : "ענו שניכם כדי לגלות את התשובות"}</div>
+      </>)}
+      {answered && !bothDone && (<div className="space-y-2">
+        {box(meName, meColor, myAns)}
+        <div style={{ fontSize: 12.5, color: C.muted, textAlign: "center" }}>ממתינים שֶ{partnerName} יענה/תענה… 🤍</div>
+      </div>)}
+      {bothDone && (<div className="space-y-2">
+        {box(meName, meColor, myAns)}
+        {box(partnerName, partnerColor, partnerAns)}
+      </div>)}
+    </Card>
+  );
+}
+
+function OnThisDayCard({ items, names }) {
+  if (!items || !items.length) return null;
+  return (
+    <Card className="fade-up p-4" style={{ animationDelay: ".09s" }}>
+      <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 16 }}>📅</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>ביום הזה</span></div>
+      <div className="space-y-2">
+        {items.map((it, i) => (
+          <div key={i} className="rounded-2xl p-3" style={{ background: C.soft }}>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>{it.ago}{names[it.from] ? " · " + names[it.from] : ""}</div>
+            <div className="text-right" style={{ fontSize: 14, color: C.ink, lineHeight: 1.45 }}>{it.text}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+const ROULETTE_COLORS = ["#F472B6", "#A855F7", "#60A5FA", "#34D399", "#FBBF24", "#FB7185", "#818CF8", "#F59E0B"];
+function RouletteCard({ options, onAdd, onDelete }) {
+  const [rot, setRot] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [result, setResult] = useState(null);
+  const [edit, setEdit] = useState(false);
+  const [txt, setTxt] = useState("");
+  const n = options.length;
+  const seg = n > 0 ? 360 / n : 360;
+  const grad = n > 0 ? "conic-gradient(" + options.map((_, i) => `${ROULETTE_COLORS[i % ROULETTE_COLORS.length]} ${i * seg}deg ${(i + 1) * seg}deg`).join(",") + ")" : "#eee";
+  function spin() {
+    if (spinning || n < 2) return;
+    setResult(null);
+    const extra = 360 * 5 + Math.floor(Math.random() * 360);
+    const next = rot + extra;
+    setSpinning(true);
+    setRot(next);
+    const finalDeg = ((next % 360) + 360) % 360;
+    const atTop = (360 - finalDeg) % 360;
+    const idx = Math.floor(atTop / seg) % n;
+    setTimeout(() => { setResult(options[idx]); setSpinning(false); }, 4200);
+  }
+  return (
+    <Card className="fade-up p-4" style={{ animationDelay: ".18s" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5"><span style={{ fontSize: 18 }}>🎡</span><span className="font-extrabold" style={{ fontSize: 15, color: C.ink }}>רולטה</span></div>
+        <button onClick={() => setEdit((v) => !v)} className="rounded-full px-3 py-1 font-bold transition active:scale-95" style={{ fontSize: 12, background: "#F6EEF2", color: "#7C3AED" }}>{edit ? "סיום" : "✏️ ערוך"}</button>
+      </div>
+
+      {edit ? (
+        <div className="mb-1">
+          <div className="flex gap-2 mb-3">
+            <input value={txt} onChange={(e) => setTxt(e.target.value)} placeholder="אפשרות חדשה לרולטה…" className={inputCls} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter" && txt.trim()) { onAdd(txt.trim()); setTxt(""); } }} />
+            <button onClick={() => { if (txt.trim()) { onAdd(txt.trim()); setTxt(""); } }} className="shrink-0 rounded-2xl px-4 font-extrabold text-white" style={{ fontSize: 20, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>+</button>
+          </div>
+          <div className="space-y-2">
+            {options.map((o, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-2xl px-3 py-2" style={{ background: C.soft }}>
+                <span className="rounded-full shrink-0" style={{ width: 12, height: 12, background: ROULETTE_COLORS[i % ROULETTE_COLORS.length] }} />
+                <span className="flex-1 text-right font-bold" style={{ fontSize: 14, color: C.ink }}>{o}</span>
+                <button onClick={() => onDelete(i)} className="shrink-0"><X style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+              </div>
+            ))}
+            {n === 0 && <div className="text-center py-2" style={{ fontSize: 12.5, color: C.muted }}>הוסיפו אפשרויות לרולטה ✨</div>}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center">
+          <div style={{ position: "relative", width: 230, height: 230, marginBottom: 14 }}>
+            <div style={{ position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "11px solid transparent", borderRight: "11px solid transparent", borderTop: "20px solid #2B2533", zIndex: 3, filter: "drop-shadow(0 2px 2px rgba(0,0,0,.2))" }} />
+            <div style={{ width: 230, height: 230, borderRadius: "50%", background: grad, border: "6px solid #fff", boxShadow: "0 10px 30px -8px rgba(150,40,80,.45)", transform: `rotate(${rot}deg)`, transition: spinning ? "transform 4s cubic-bezier(.17,.67,.3,1)" : "none", position: "relative" }}>
+              {options.map((o, i) => {
+                const mid = (i + 0.5) * seg;
+                const r = (mid * Math.PI) / 180;
+                const x = 115 + 68 * Math.sin(r);
+                const y = 115 - 68 * Math.cos(r);
+                return (
+                  <div key={i} style={{ position: "absolute", left: x, top: y, width: 82, transform: `translate(-50%,-50%) rotate(${-rot}deg)`, transition: spinning ? "transform 4s cubic-bezier(.17,.67,.3,1)" : "none", textAlign: "center", pointerEvents: "none" }}>
+                    <span style={{ display: "inline-block", color: "#fff", fontSize: 10, fontWeight: 800, lineHeight: 1.12, textShadow: "0 1px 2px rgba(0,0,0,.5)", wordBreak: "break-word", maxHeight: 36, overflow: "hidden" }}>{o}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: "50%", background: "#fff", boxShadow: "0 2px 6px rgba(0,0,0,.2)", zIndex: 2, display: "grid", placeItems: "center", fontSize: 16 }}>❤️</div>
+          </div>
+          {result && <div className="rounded-2xl px-4 py-2 mb-3 text-center font-extrabold fade-up" style={{ fontSize: 16, color: "#fff", background: "linear-gradient(95deg,#A855F7,#EC4899)" }}>{result}</div>}
+          <button onClick={spin} disabled={spinning || n < 2} className="w-full rounded-3xl py-3.5 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 15, background: "linear-gradient(95deg,#7C3AED,#EC4899)" }}>
+            {n < 2 ? "הוסיפו לפחות 2 אפשרויות" : spinning ? "מסתובב…" : "סובב! 🎡"}
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* ============================ app ============================ */
+function App() {
+  const [fb, setFb] = useState(typeof window !== "undefined" ? (window.__fb || null) : null);
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authErr, setAuthErr] = useState("");
+  const [fbError, setFbError] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState("");
+
+  const [data, setData] = useState(null);
+  const [coupleId, setCoupleId] = useState(null);
+  const [linkReady, setLinkReady] = useState(false);
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkErr, setLinkErr] = useState("");
+  const lastSavedRef = useRef("");
+  const saveTimerRef = useRef(null);
+  const seenLettersRef = useRef(null);
+  const localLettersRef = useRef(new Set());
+
+
+  const [now, setNow] = useState(Date.now());
+  const [modal, setModal] = useState(null);
+  const [cdTarget, setCdTarget] = useState(null);
+  const [openLetter, setOpenLetter] = useState(null);
+  const [moodPickerFor, setMoodPickerFor] = useState(null);
+  const [open, setOpen] = useState({ dreams: false, keepsakes: false, reminders: false, watchlist: false });
+  const [dreamTxt, setDreamTxt] = useState("");
+  const [watchTxt, setWatchTxt] = useState("");
+  const [thinkSent, setThinkSent] = useState(false);
+  const [msgTxt, setMsgTxt] = useState("");
+  const [msgSent, setMsgSent] = useState(false);
+  const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+
+  const td = new Date();
+  const todayISO = isoOf(td);
+  const [selectedDate, setSelectedDate] = useState(todayISO);
+  const [cal, setCal] = useState({ y: td.getFullYear(), m: td.getMonth() });
+
+  // tick clock
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+
+  // wait for firebase module to be ready
+  useEffect(() => {
+    if (fb) return;
+    const onReady = () => setFb(window.__fb);
+    window.addEventListener("fb-ready", onReady);
+    if (window.__fb) setFb(window.__fb);
+    const to = setTimeout(() => { if (!window.__fb) setFbError(true); }, 12000);
+    return () => { window.removeEventListener("fb-ready", onReady); clearTimeout(to); };
+  }, [fb]);
+
+  // auth state
+  useEffect(() => {
+    if (!fb) return;
+    const unsub = fb.onAuthStateChanged(fb.auth, (u) => { setUser(u); setVerified(!!(u && u.emailVerified)); setAuthReady(true); });
+    return () => unsub();
+  }, [fb]);
+
+  // find which couple this user belongs to (reacts when they create/join)
+  useEffect(() => {
+    if (!fb || !user || !verified) { setCoupleId(null); setLinkReady(false); return; }
+    const ref = fb.doc(fb.db, "users", user.uid);
+    const unsub = fb.onSnapshot(ref, (snap) => {
+      setCoupleId(snap.exists() && snap.data() ? (snap.data().coupleId || null) : null);
+      setLinkReady(true);
+    }, (err) => { console.error("mapping snapshot", err); setLinkReady(true); });
+    return () => unsub();
+  }, [fb, user, verified]);
+
+  // live load the shared couple journal
+  useEffect(() => {
+    if (!fb || !user || !verified || !coupleId) { setData(null); return; }
+    const ref = fb.doc(fb.db, "couples", coupleId);
+    const unsub = fb.onSnapshot(ref, (snap) => {
+      if (snap.exists() && snap.data()) {
+        const raw = snap.data();
+        const norm = normalize(raw);
+        norm.a = raw.a || null;
+        norm.b = raw.b || null;
+        lastSavedRef.current = JSON.stringify(norm);
+        setData(norm);
+      }
+    }, (err) => console.error("couple snapshot error", err));
+    return () => unsub();
+  }, [fb, user, verified, coupleId]);
+
+  // save journal (debounced; never overwrites membership a/b)
+  useEffect(() => {
+    if (!fb || !user || !data || !coupleId) return;
+    const j = JSON.stringify(data);
+    if (j === lastSavedRef.current) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      lastSavedRef.current = j;
+      const obj = JSON.parse(j); delete obj.a; delete obj.b;
+      fb.setDoc(fb.doc(fb.db, "couples", coupleId), obj, { merge: true }).catch((e) => console.error("save failed", e));
+    }, 400);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [data, fb, user, coupleId]);
+
+  // mark reminders as done once their time passes (no in-app pop-up)
+  useEffect(() => {
+    if (!data || !data.reminders || !data.reminders.length) return;
+    const nowMs = Date.now();
+    const due = data.reminders.filter((r) => !r.fired && new Date(r.at).getTime() <= nowMs);
+    if (!due.length) return;
+    setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
+  }, [now]);
+
+  // schedule phone pushes (ntfy) for upcoming timed events & reminders — fires even when app is closed
+  useEffect(() => {
+    if (!data || !data.ntfyOn || !data.ntfyTopic) return;
+    const nowMs = Date.now();
+    const maxMs = nowMs + 3 * 864e5; // ntfy.sh allows scheduling up to 3 days ahead
+    const toSend = [];
+    let changed = false;
+    const events = data.events.map((e) => {
+      if (!e.at) return e;
+      const fireAt = new Date(e.at).getTime() - (e.notifyMin || 0) * 60000;
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && e.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🗓️ " + e.title + (e.time ? " · " + e.time : "") });
+        changed = true;
+        return { ...e, ntfySched: fireAt };
+      }
+      return e;
+    });
+    const reminders = data.reminders.map((r) => {
+      if (r.fired || !r.at) return r;
+      const fireAt = new Date(r.at).getTime();
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && r.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🔔 " + r.text });
+        changed = true;
+        return { ...r, ntfySched: fireAt };
+      }
+      return r;
+    });
+    if (changed) {
+      toSend.forEach((s) => scheduleNtfy(data.ntfyTopic, s.fireAt, s.msg));
+      setData((d) => ({ ...d, events, reminders }));
+    }
+  }, [data]);
+  const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake || l.createdAt + l.durationHours * 3600000 > now).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
+  const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake && (!l.openAt || l.openAt <= now)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
+  const sortedCds = useMemo(() => !data ? [] : [...data.countdowns].sort((a, b) => new Date(a.date) - new Date(b.date)), [data]);
+  const eventsByDate = useMemo(() => { const map = {}; if (data) for (const e of data.events) { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); } return map; }, [data]);
+  const onThisDayItems = useMemo(() => {
+    if (!data) return [];
+    const t = new Date(); const dom = t.getDate(); const startMonth = new Date(t.getFullYear(), t.getMonth(), 1).getTime();
+    return data.letters.filter((l) => l.keepsake && l.text && (!l.openAt || l.openAt <= Date.now()) && new Date(l.createdAt).getDate() === dom && l.createdAt < startMonth)
+      .sort((a, b) => b.createdAt - a.createdAt).slice(0, 4)
+      .map((l) => { const d = new Date(l.createdAt); const months = (t.getFullYear() - d.getFullYear()) * 12 + (t.getMonth() - d.getMonth()); let ago; if (months >= 12) { const y = Math.floor(months / 12); ago = y === 1 ? "לפני שנה" : "לפני " + y + " שנים"; } else { ago = months === 1 ? "לפני חודש" : "לפני " + months + " חודשים"; } return { text: l.text, from: l.from, ago }; });
+  }, [data, todayISO]);
+
+  /* auth handlers */
+  async function doSignIn(email, password) {
+    setAuthErr("");
+    if (!email || !password) { setAuthErr("נא למלא אימייל וסיסמה"); return; }
+    setAuthBusy(true);
+    try { await fb.signInWithEmailAndPassword(fb.auth, email, password); }
+    catch (e) { setAuthErr(translateAuthError(e)); }
+    finally { setAuthBusy(false); }
+  }
+  async function doSignUp(email, password) {
+    setAuthErr("");
+    if (!email || !password) { setAuthErr("נא למלא אימייל וסיסמה"); return; }
+    setAuthBusy(true);
+    try {
+      const cred = await fb.createUserWithEmailAndPassword(fb.auth, email, password);
+      try { await fb.sendEmailVerification(cred.user); } catch (e) { console.error("verification email failed", e); }
+    }
+    catch (e) { setAuthErr(translateAuthError(e)); }
+    finally { setAuthBusy(false); }
+  }
+  async function doSignOut() { try { await fb.signOut(fb.auth); } catch (e) { console.error(e); } }
+  async function doResetPassword() { try { if (user && user.email) { await fb.sendPasswordResetEmail(fb.auth, user.email); return true; } return false; } catch (e) { console.error(e); return false; } }
+
+  async function doCreateCouple(name) {
+    setLinkErr(""); setLinkBusy(true);
+    try {
+      const cid = "c" + Math.random().toString(36).slice(2, 9) + Math.random().toString(36).slice(2, 6);
+      const seed = buildSeed(); seed.names = { a: (name || "").trim(), b: "" };
+      await fb.setDoc(fb.doc(fb.db, "couples", cid), { a: user.uid, b: null, ...seed });
+      await fb.setDoc(fb.doc(fb.db, "users", user.uid), { coupleId: cid });
+    } catch (e) { console.error("create couple failed", e); setLinkErr("שגיאה ביצירה, נסו שוב"); }
+    finally { setLinkBusy(false); }
+  }
+  async function doJoinCouple(code, name) {
+    setLinkErr("");
+    const c = (code || "").trim();
+    if (!c) { setLinkErr("הזינו קוד"); return; }
+    setLinkBusy(true);
+    try {
+      await fb.setDoc(fb.doc(fb.db, "couples", c), { b: user.uid, names: { b: (name || "").trim() } }, { merge: true });
+      await fb.setDoc(fb.doc(fb.db, "users", user.uid), { coupleId: c });
+    } catch (e) { console.error("join couple failed", e); setLinkErr("קוד לא תקין, או שהיומן כבר מלא"); setLinkBusy(false); return; }
+    setLinkBusy(false);
+  }
+
+  async function resendVerification() {
+    setVerifyMsg(""); setVerifyBusy(true);
+    try {
+      if (fb.auth.currentUser) { await fb.sendEmailVerification(fb.auth.currentUser); setVerifyMsg("שלחנו מייל אימות — בדקו את תיבת הדואר (וגם ספאם)"); }
+    } catch (e) { setVerifyMsg(e && e.code && e.code.includes("too-many-requests") ? "שלחנו כבר מייל — נסו שוב בעוד כמה דקות" : "שגיאה בשליחת המייל, נסו שוב"); }
+    finally { setVerifyBusy(false); }
+  }
+  async function checkVerified() {
+    setVerifyMsg(""); setVerifyBusy(true);
+    try {
+      if (fb.auth.currentUser) {
+        await fb.auth.currentUser.reload();
+        if (fb.auth.currentUser.emailVerified) { setVerified(true); }
+        else { setVerifyMsg("עדיין לא אומת. לחצו על הקישור במייל ואז נסו שוב"); }
+      }
+    } catch (e) { setVerifyMsg("שגיאה, נסו שוב"); }
+    finally { setVerifyBusy(false); }
+  }
+
+  /* ---- gates (all hooks are above this line) ---- */
+  if (fbError) return <Splash text="אין חיבור לשרת — בדקו אינטרנט ורעננו" />;
+  if (!fb || !authReady) return <Splash text="טוען…" />;
+  if (!user) return <LoginScreen onSignIn={doSignIn} onSignUp={doSignUp} busy={authBusy} error={authErr} />;
+  if (!verified) return <VerifyScreen email={user.email} busy={verifyBusy} msg={verifyMsg} onResend={resendVerification} onCheck={checkVerified} onSignOut={doSignOut} />;
+  if (!linkReady) return <Splash text="טוען…" />;
+  if (!coupleId) return <LinkScreen busy={linkBusy} error={linkErr} onCreate={doCreateCouple} onJoin={doJoinCouple} onSignOut={doSignOut} />;
+  if (!data) return <Splash text="טוען את היומן…" />;
+
+  /* non-hook derived (only when data exists) */
+  const T = THEMES[data.theme] || THEMES.sunset;
+  const upcoming = sortedCds.filter((c) => new Date(c.date).getTime() > now);
+  const heroCd = upcoming[0] || sortedCds[sortedCds.length - 1] || null;
+  const otherCds = sortedCds.filter((c) => !heroCd || c.id !== heroCd.id);
+  const cdMs = heroCd ? Math.max(0, new Date(heroCd.date).getTime() - now) : 0;
+  const cd = { days: Math.floor(cdMs / 86400000), hours: Math.floor((cdMs % 86400000) / 3600000), minutes: Math.floor((cdMs % 3600000) / 60000), seconds: Math.floor((cdMs % 60000) / 1000), done: heroCd && cdMs <= 0 };
+  const pendingDreams = data.dreams.filter((d) => !d.done).length;
+  const daysTogether = data.anniversary ? Math.max(0, Math.floor((Date.now() - new Date(data.anniversary).getTime()) / 86400000)) : null;
+  const moodA = data.moods && data.moods.a && data.moods.a.date === todayISO ? data.moods.a.emoji : null;
+  const moodB = data.moods && data.moods.b && data.moods.b.date === todayISO ? data.moods.b.emoji : null;
+  const streak = calcStreak(data.activityDates);
+
+  const { y, m } = cal;
+  const startDow = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const selDay = Number(selectedDate.slice(8, 10));
+  const selMonthIdx = Number(selectedDate.slice(5, 7)) - 1;
+  const dayEvents = eventsByDate[selectedDate] || [];
+  const me = (data.b && user.uid === data.b) ? "b" : "a";
+  const meColor = me === "b" ? "#EC4899" : "#3B82F6";
+  const N = { a: data.names.a || "אני", b: data.names.b || "את/ה" };
+  const coupleTitle = (data.names.a || data.names.b) ? `${data.names.a} ו${data.names.b}` : "היומן שלנו";
+  const F = data.features || {};
+  const partner = me === "a" ? "b" : "a";
+  const dayNum = Math.floor(new Date(todayISO + "T00:00:00").getTime() / 864e5);
+  const todayQuestion = DAILY_QUESTIONS[((dayNum % DAILY_QUESTIONS.length) + DAILY_QUESTIONS.length) % DAILY_QUESTIONS.length];
+  const todayAns = (data.dailyAnswers && data.dailyAnswers[todayISO]) || {};
+  const myAns = todayAns[me] || null;
+  const partnerAns = todayAns[partner] || null;
+  const sendThinking = () => { if (!data.ntfyOn || !data.ntfyTopic) return; sendNtfy(data.ntfyTopic, "💭 " + N[me] + " חושב/ת עלייך עכשיו 🥰"); setThinkSent(true); setTimeout(() => setThinkSent(false), 2500); };
+  const sendMsg = () => { if (!data.ntfyOn || !data.ntfyTopic || !msgTxt.trim()) return; sendNtfy(data.ntfyTopic, "💬 " + N[me] + ": " + msgTxt.trim()); setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500); };
+  const addRoulette = (t) => setData((d) => ({ ...d, roulette: [...(d.roulette || []), t] }));
+  const delRoulette = (i) => setData((d) => ({ ...d, roulette: (d.roulette || []).filter((_, idx) => idx !== i) }));
+  const pendingWatch = data.watchlist.filter((w) => !w.done).length;
+
+  const act = (d) => (d.activityDates && d.activityDates.includes(todayISO) ? d.activityDates : [...(d.activityDates || []), todayISO]);
+  const saveDailyAnswer = (text) => setData((d) => { const day = { ...((d.dailyAnswers && d.dailyAnswers[todayISO]) || {}) }; day[me] = text; return { ...d, dailyAnswers: { ...(d.dailyAnswers || {}), [todayISO]: day }, activityDates: act(d) }; });
+
+  /* mutations */
+  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from])); };
+  const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
+  const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true, photo: null } : l) }));
+  const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
+  const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
+  const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
+  const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
+  const delCountdown = (id) => { setData((d) => ({ ...d, countdowns: d.countdowns.filter((x) => x.id !== id) })); setModal(null); setCdTarget(null); };
+  const saveSettings = (s) => { setData((d) => ({ ...d, ...s })); setModal(null); };
+  const setMood = (p, emoji) => { setData((d) => ({ ...d, moods: { ...d.moods, [p]: { date: todayISO, emoji } }, activityDates: act(d) })); setMoodPickerFor(null); };
+  const addDream = () => { if (!dreamTxt.trim()) return; setData((d) => ({ ...d, dreams: [{ id: uid(), text: dreamTxt.trim(), done: false }, ...d.dreams] })); setDreamTxt(""); };
+  const toggleDream = (id) => setData((d) => ({ ...d, dreams: d.dreams.map((x) => x.id === id ? { ...x, done: !x.done } : x) }));
+  const delDream = (id) => setData((d) => ({ ...d, dreams: d.dreams.filter((x) => x.id !== id) }));
+  const addWatch = () => { if (!watchTxt.trim()) return; setData((d) => ({ ...d, watchlist: [{ id: uid(), text: watchTxt.trim(), done: false }, ...(d.watchlist || [])] })); setWatchTxt(""); };
+  const toggleWatch = (id) => setData((d) => ({ ...d, watchlist: d.watchlist.map((x) => x.id === id ? { ...x, done: !x.done } : x) }));
+  const delWatch = (id) => setData((d) => ({ ...d, watchlist: d.watchlist.filter((x) => x.id !== id) }));
+  const addReminder = (r) => { setData((d) => ({ ...d, reminders: [...d.reminders, r] })); setModal(null); };
+  const delReminder = (id) => setData((d) => ({ ...d, reminders: d.reminders.filter((x) => x.id !== id) }));
+  const openCd = (target) => { setCdTarget(target); setModal("countdown"); };
+
+  return (
+    <div dir="rtl" style={{ position: "relative", fontFamily: BODY, minHeight: "100vh", background: T.bg, overflow: "hidden" }}>
+      <style>{`
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        @keyframes pulseSoft { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes floaty { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(8deg); } }
+        @keyframes slideDown { from { opacity:0; transform: translateY(-16px);} to {opacity:1; transform:none;} }
+        .fade-up { animation: fadeUp .55s cubic-bezier(.2,.7,.2,1) both; }
+        .pulse-soft { animation: pulseSoft 2.4s ease-in-out infinite; }
+        .floaty { animation: floaty 4s ease-in-out infinite; }
+        .slide-down { animation: slideDown .35s ease both; }
+        *::-webkit-scrollbar { width: 0; height: 0; }
+        @media (prefers-reduced-motion: reduce) { .fade-up,.pulse-soft,.floaty,.slide-down { animation: none !important; } }
+      `}</style>
+
+      <div style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+        <div style={{ position: "absolute", top: -90, right: -70, width: 270, height: 270, borderRadius: 999, background: T.blobs[0], filter: "blur(70px)", opacity: 0.55 }} />
+        <div style={{ position: "absolute", top: 260, left: -90, width: 300, height: 300, borderRadius: 999, background: T.blobs[1], filter: "blur(80px)", opacity: 0.5 }} />
+        <div style={{ position: "absolute", bottom: -110, right: -50, width: 290, height: 290, borderRadius: 999, background: T.blobs[2], filter: "blur(80px)", opacity: 0.5 }} />
+      </div>
+
+      <div className="mx-auto w-full px-4 pb-12 pt-5 space-y-4" style={{ maxWidth: 430, position: "relative", zIndex: 1 }}>
+
+        <Card className="fade-up p-3.5">
+          <div className="flex items-center gap-3">
+            <div className="grid place-items-center rounded-2xl shrink-0" style={{ width: 50, height: 50, background: T.icon, boxShadow: `0 8px 18px -8px ${T.swatch}` }}>
+              <Calendar style={{ width: 24, height: 24, color: "#fff" }} />
+            </div>
+            <button onClick={() => setModal("settings")} className="flex-1 text-center">
+              <div className="font-semibold" style={{ fontSize: 11, color: C.muted }}>{(data.names.a || data.names.b) ? "היומן של" : "\u00A0"}</div>
+              <div style={{ fontFamily: SCRIPT, fontSize: 25, color: C.ink, lineHeight: 1.05 }}>{coupleTitle} ❤️</div>
+            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <RoundBtn onClick={() => setModal("settings")} className="w-9 h-9" style={{ background: "#F4EEF1" }} aria-label="הגדרות"><span style={{ fontSize: 17, lineHeight: 1 }}>⚙️</span></RoundBtn>
+              <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ background: "#EAF7EE" }}>
+                <span className="rounded-full" style={{ width: 7, height: 7, background: "#22C55E", boxShadow: "0 0 0 3px #22C55E33" }} />
+                <span className="font-bold" style={{ fontSize: 11, color: "#16A34A" }}>מסונכרן</span>
+              </div>
+            </div>
+          </div>
+          {daysTogether != null && (
+            <button onClick={() => setModal("settings")} className="w-full flex items-center justify-center gap-1.5 mt-2 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+              <Heart style={{ width: 14, height: 14, fill: "#EC4899", color: "#EC4899" }} />
+              <span style={{ fontFamily: SCRIPT, fontSize: 16, color: T.accent }}>ביחד כבר {daysTogether.toLocaleString("he-IL")} ימים</span>
+            </button>
+          )}
+        </Card>
+
+        <div className="fade-up flex items-center gap-2 px-1 flex-wrap" style={{ animationDelay: ".05s" }}>
+          <span className="flex items-center gap-1.5 rounded-full pl-3 pr-1.5 py-1 font-bold" style={{ fontSize: 13, background: meColor, color: "#fff", boxShadow: `0 8px 18px -10px ${meColor}` }}>
+            <span className="rounded-full grid place-items-center font-extrabold" style={{ width: 22, height: 22, fontSize: 11, background: "rgba(255,255,255,.28)", color: "#fff" }}>{(N[me] || "").charAt(0) || "♥"}</span>
+            ✍️ כותב/ת בתור {N[me]}
+          </span>
+          {streak > 0 && (
+            <span className="flex items-center gap-1 rounded-full px-3 py-1.5" style={{ background: "#FFF1E6", border: "1px solid #FCE0CC" }}>
+              <span style={{ fontSize: 13 }}>🔥</span><span className="font-extrabold" style={{ fontSize: 12.5, color: "#EA580C" }}>{streak} ימים ברצף</span>
+            </span>
+          )}
+        </div>
+
+        {data.ntfyOn && data.ntfyTopic && (
+          <button onClick={sendThinking} className="fade-up w-full rounded-3xl py-3.5 flex items-center justify-center gap-2 font-extrabold transition active:scale-95"
+            style={{ animationDelay: ".06s", fontSize: 15, color: "#fff", background: "linear-gradient(95deg,#F472B6,#A855F7)", boxShadow: "0 14px 28px -14px #A855F7" }}>
+            {thinkSent ? "נשלח! 💌" : "💭 חושב/ת עלייך — שלח/י נשיקה"}
+          </button>
+        )}
+
+        {data.ntfyOn && data.ntfyTopic && (
+          <Card className="fade-up p-3" style={{ animationDelay: ".08s" }}>
+            <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>💬</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>שלח/י הודעה עכשיו</span></div>
+            <div className="flex gap-2">
+              <input value={msgTxt} onChange={(e) => setMsgTxt(e.target.value)} placeholder="כתבו משהו ושלחו…" className={inputCls} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }} />
+              <button onClick={sendMsg} disabled={!msgTxt.trim()} className="shrink-0 rounded-2xl px-5 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>{msgSent ? "✓" : "שלח"}</button>
+            </div>
+          </Card>
+        )}
+
+        {F.dailyQ && <DailyQuestionCard question={todayQuestion} myAns={myAns} partnerAns={partnerAns} meName={N[me]} partnerName={N[partner]} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} onSave={saveDailyAnswer} />}
+
+        {F.onThisDay && <OnThisDayCard items={onThisDayItems} names={N} />}
+
+        {F.countdowns && (heroCd ? (
+          <Card className="fade-up relative overflow-hidden text-white p-5"
+            style={{ animationDelay: ".1s", border: "none", background: T.hero, boxShadow: `0 22px 46px -18px ${T.heroShadow}` }}>
+            <Sparkles className="floaty" style={{ position: "absolute", top: 14, left: 56, width: 18, height: 18, color: "rgba(255,255,255,.85)" }} />
+            <button onClick={() => openCd(heroCd)} className="absolute top-3 left-3 w-9 h-9 grid place-items-center rounded-full" style={{ background: "rgba(255,255,255,.25)" }}>
+              <Pencil style={{ width: 16, height: 16, color: "#fff" }} />
+            </button>
+            <div className="text-right" style={{ textShadow: "0 1px 8px rgba(120,20,40,.25)" }}>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.9)" }}>מתרגשים לקראת…</div>
+              <div className="font-black leading-tight" style={{ fontSize: 31, marginTop: 2 }}>{heroCd.title} {heroCd.emoji}</div>
+              <div style={{ fontSize: 12.5, marginTop: 3, color: "rgba(255,255,255,.85)" }}>נקבע ע״י {N[heroCd.setBy]}</div>
+            </div>
+            {cd.done ? (
+              <div className="mt-4 rounded-2xl py-5 text-center font-black" style={{ fontSize: 22, background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.25)" }}>🎉 הגיע היום! 🎉</div>
+            ) : (
+              <div className="mt-4 flex gap-2">
+                {[{ n: cd.days, l: "ימים" }, { n: cd.hours, l: "שעות" }, { n: cd.minutes, l: "דקות" }, { n: cd.seconds, l: "שניות", hot: true }].map((tile, i) => (
+                  <div key={i} className={"flex-1 rounded-2xl py-3 text-center" + (tile.hot ? " pulse-soft" : "")} style={{ background: "rgba(255,255,255,.16)", border: "1px solid rgba(255,255,255,.22)", backdropFilter: "blur(3px)" }}>
+                    <div className="font-black tabular-nums leading-none" style={{ fontSize: 26, color: tile.hot ? "#FFE08A" : "#fff" }}>{pad(tile.n)}</div>
+                    <div style={{ fontSize: 11, marginTop: 6, color: "rgba(255,255,255,.85)" }}>{tile.l}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        ) : (
+          <Card className="fade-up p-5 text-center" style={{ animationDelay: ".1s" }}>
+            <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>אין עדיין ספירה לאחור 🎉</div>
+            <button onClick={() => openCd(null)} className="mt-3 rounded-3xl px-5 py-3 text-white font-extrabold" style={{ fontSize: 14, background: "linear-gradient(95deg,#FB923C,#EF4444)" }}>+ הוספת ספירה</button>
+          </Card>
+        ))}
+
+        {F.countdowns && heroCd && (
+          <div className="fade-up flex gap-2 overflow-x-auto pb-1 px-1" style={{ animationDelay: ".12s" }}>
+            {otherCds.map((c) => {
+              const dd = Math.max(0, Math.ceil((new Date(c.date).getTime() - now) / 86400000));
+              return (
+                <button key={c.id} onClick={() => openCd(c)} className="shrink-0 rounded-2xl px-3 py-2 flex items-center gap-2 transition active:scale-95" style={{ background: "#fff", border: `1px solid ${C.line}` }}>
+                  <span style={{ fontSize: 18 }}>{c.emoji}</span>
+                  <div className="text-right"><div className="font-bold" style={{ fontSize: 13, color: C.ink }}>{c.title}</div><div style={{ fontSize: 11, color: C.muted }}>בעוד {dd.toLocaleString("he-IL")} ימים</div></div>
+                </button>
+              );
+            })}
+            <button onClick={() => openCd(null)} className="shrink-0 rounded-2xl px-4 py-2 flex items-center gap-1.5 font-bold transition active:scale-95" style={{ fontSize: 13, color: T.accent, background: "#fff", border: `1.5px dashed ${T.swatch}66` }}>
+              <Plus style={{ width: 16, height: 16 }} /> ספירה
+            </button>
+          </div>
+        )}
+
+        {data.longDistance && <LongDistanceCard people={data.people} names={N} now={now} />}
+
+        {F.roulette && <RouletteCard options={data.roulette || []} onAdd={addRoulette} onDelete={delRoulette} />}
+
+        <div className="fade-up space-y-2" style={{ animationDelay: ".18s" }}>
+          {visibleLetters.length === 0 && (
+            <Card className="p-6 text-center"><div className="font-bold" style={{ fontSize: 15, color: C.ink }}>אין מכתבים פתוחים כרגע 💌</div><div style={{ fontSize: 13, marginTop: 2, color: C.muted }}>כתבו מכתב חדש זה לזה למטה</div></Card>
+          )}
+          {visibleLetters.map((l) => {
+            const locked = l.openAt && l.openAt > now;
+            const accent = l.from === "b" ? "#EC4899" : "#3B82F6";
+            const tint = locked ? "#F3F0FF" : (l.from === "b" ? "#FFF5F9" : "#F4F8FF");
+            if (locked) return (
+              <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
+                <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: "#7C3AED" }} />
+                <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: "#EBE3FB", fontSize: 22 }}>🔒</div>
+                <div className="flex-1 min-w-0 text-right">
+                  <div className="font-extrabold" style={{ fontSize: 15, color: C.ink }}>מכתב חתום מ{N[l.from]}</div>
+                  <div style={{ fontSize: 12.5, marginTop: 2, color: "#7C3AED" }}>נפתח ב-{new Date(l.openAt).toLocaleDateString("he-IL")} 🔒</div>
+                </div>
+              </Card>
+            );
+            return (
+              <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
+                <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: accent }} />
+                {l.photo ? <img src={l.photo} alt="" className="rounded-2xl object-cover shrink-0" style={{ width: 48, height: 48 }} />
+                  : <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: `${accent}1f` }}><Heart style={{ width: 20, height: 20, fill: accent, color: accent }} /></div>}
+                <div className="flex-1 min-w-0 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <span className="flex items-center gap-1" style={{ fontSize: 11, color: C.muted }}><Clock style={{ width: 12, height: 12 }} /> {timeLabel(l.createdAt)}</span>
+                    <span className="font-extrabold" style={{ fontSize: 15, color: C.ink }}>מכתב מ{N[l.from]}{l.keepsake ? " ⭐" : ""}</span>
+                  </div>
+                  <div className="truncate" style={{ fontSize: 13, marginTop: 2, color: "#8C8593" }}>{l.text}</div>
+                </div>
+                <div className="relative shrink-0">
+                  <div className="rounded-full grid place-items-center" style={{ width: 38, height: 38, background: `${accent}1a` }}><Heart style={{ width: 18, height: 18, fill: accent, color: accent }} /></div>
+                  {l.reaction && <span style={{ position: "absolute", bottom: -6, left: -6, fontSize: 16, filter: "drop-shadow(0 1px 2px rgba(0,0,0,.15))" }}>{l.reaction}</span>}
+                </div>
+              </Card>
+            );
+          })}
+          <button onClick={() => setModal("letter")} className="w-full rounded-3xl py-3.5 flex items-center justify-center gap-2 text-white font-extrabold transition active:scale-95" style={{ fontSize: 15, background: `linear-gradient(95deg, ${meColor}, #F472B6)`, boxShadow: `0 14px 28px -14px ${meColor}` }}>
+            <Plus style={{ width: 20, height: 20 }} /> מכתב חדש מ{N[me]}
+          </button>
+        </div>
+
+        {F.keepsakes && (
+        <Section icon={<ImageIcon style={{ width: 22, height: 22, color: "#EC4899" }} />} iconBg="#FCE7F0" title="המזכרות שלנו" badge={keepsakes.length} badgeColor="#EC4899" open={open.keepsakes} onToggle={() => toggle("keepsakes")}>
+          {keepsakes.length === 0 ? <div className="text-center py-4" style={{ fontSize: 13, color: C.muted }}>שמרו מכתב כמזכרת והוא יישמר כאן לתמיד ⭐</div> : (
+            <div className="grid grid-cols-3 gap-2">
+              {keepsakes.map((l) => {
+                const accent = l.from === "b" ? "#EC4899" : "#3B82F6";
+                return (
+                  <button key={l.id} onClick={() => setOpenLetter(l.id)} className="rounded-2xl overflow-hidden transition active:scale-95" style={{ border: `1px solid ${C.line}`, background: "#fff" }}>
+                    <div className="w-full grid place-items-center" style={{ height: 84, background: `${accent}14` }}><Heart style={{ width: 26, height: 26, fill: accent, color: accent }} /></div>
+                    <div className="px-2 py-1.5 text-right"><div className="font-bold truncate" style={{ fontSize: 11, color: C.ink }}>{N[l.from]}</div><div className="truncate" style={{ fontSize: 10, color: C.muted }}>{new Date(l.createdAt).toLocaleDateString("he-IL")}</div></div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Section>
+        )}
+
+        {F.dreams && (
+        <Section icon={<Cloud style={{ width: 22, height: 22, color: "#60A5FA" }} />} iconBg="#EAF2FF" title="רשימת החלומות שלנו" badge={`${pendingDreams} ממתינים`} badgeColor="#3B82F6" open={open.dreams} onToggle={() => toggle("dreams")}>
+          <AddRow value={dreamTxt} onChange={setDreamTxt} onAdd={addDream} placeholder="חלום חדש שנגשים ביחד…" grad="linear-gradient(135deg,#60A5FA,#7C3AED)" />
+          {data.dreams.map((d) => <ListRow key={d.id} text={d.text} done={d.done} onToggle={() => toggleDream(d.id)} onDelete={() => delDream(d.id)} />)}
+        </Section>
+        )}
+
+        {F.watchlist && (
+        <Section icon={<span style={{ fontSize: 22 }}>🎬</span>} iconBg="#F3E8FF" title="רשימת צפייה" badge={`${pendingWatch} לראות`} badgeColor="#7C3AED" open={open.watchlist} onToggle={() => toggle("watchlist")}>
+          <AddRow value={watchTxt} onChange={setWatchTxt} onAdd={addWatch} placeholder="סרט / סדרה לראות יחד…" grad="linear-gradient(135deg,#A855F7,#EC4899)" />
+          {data.watchlist.map((w) => <ListRow key={w.id} text={w.text} done={w.done} onToggle={() => toggleWatch(w.id)} onDelete={() => delWatch(w.id)} doneColor="#A855F7" />)}
+        </Section>
+        )}
+
+        <Card className="fade-up p-4" style={{ animationDelay: ".26s" }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-black" style={{ fontSize: 22, color: C.ink }}>{MONTHS[m]} {y}</div>
+            <div className="flex gap-2">
+              <RoundBtn onClick={() => setCal((c) => c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 })} className="w-9 h-9" style={{ background: "#F6EEF2" }}><ChevronRight style={{ width: 20, height: 20, color: C.ink }} /></RoundBtn>
+              <RoundBtn onClick={() => setCal((c) => c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 })} className="w-9 h-9" style={{ background: "#F6EEF2" }}><ChevronLeft style={{ width: 20, height: 20, color: C.ink }} /></RoundBtn>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 mb-1">{DOW.map((d) => <div key={d} className="text-center font-bold py-1.5" style={{ fontSize: 12, color: C.muted }}>{d}</div>)}</div>
+          <div className="grid grid-cols-7 gap-1">
+            {cells.map((d, i) => {
+              if (d === null) return <div key={i} className="rounded-xl" style={{ background: "#F7F1F4", minHeight: 58 }} />;
+              const dISO = iso(y, m, d); const evs = eventsByDate[dISO] || []; const isToday = dISO === todayISO; const isSel = dISO === selectedDate;
+              return (
+                <button key={i} onClick={() => setSelectedDate(dISO)} className="rounded-xl p-1 flex flex-col items-center gap-0.5 transition" style={{ minHeight: 58, background: "#fff", outline: isSel ? "2px solid #F472B6" : `1px solid ${C.line}`, outlineOffset: -1 }}>
+                  <span className="font-bold grid place-items-center" style={isToday ? { width: 24, height: 24, borderRadius: 999, background: "#3B82F6", color: "#fff", fontSize: 13 } : { fontSize: 13, color: C.ink }}>{d}</span>
+                  <div className="w-full flex flex-col gap-0.5">
+                    {evs.slice(0, 2).map((e) => <div key={e.id} className="rounded text-white px-1 truncate leading-tight" style={{ fontSize: 9, paddingTop: 1, paddingBottom: 1, background: CATS[e.cat].bg }}>{e.title}</div>)}
+                    {evs.length > 2 && <div className="text-center font-bold" style={{ fontSize: 8.5, color: C.muted }}>+{evs.length - 2} נוספים</div>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="fade-up overflow-hidden" style={{ animationDelay: ".3s" }}>
+          <div className="p-4" style={{ background: "linear-gradient(95deg,#F3EEFF,#FCEFF6)" }}>
+            <div className="text-right font-extrabold" style={{ fontSize: 19, color: C.ink }}>תוכניות ל־{selDay} ב{MONTHS[selMonthIdx]}</div>
+            <div className="text-right" style={{ fontSize: 13, marginTop: 2, color: C.muted }}>{dayEvents.length ? `${dayEvents.length} ${dayEvents.length === 1 ? "אירוע" : "אירועים"}` : (selectedDate === todayISO ? "אין תוכניות להיום 😉" : "אין אירועים ליום זה")}</div>
+          </div>
+          <div className="p-3">
+            {dayEvents.length === 0 ? (
+              <div className="py-10 text-center">
+                <div className="grid place-items-center mx-auto mb-3 rounded-full" style={{ width: 64, height: 64, background: "#F4EEF1" }}><Calendar style={{ width: 28, height: 28, color: "#C9B6C0" }} /></div>
+                <div className="font-bold" style={{ fontSize: 16, color: "#7C8595" }}>אין תוכניות ליום זה</div>
+                <div style={{ fontSize: 13, marginTop: 2, color: C.muted }}>תוכלו להוסיף תוכנית חדשה למטה</div>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-3">
+                {dayEvents.map((e) => (
+                  <div key={e.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: C.soft }}>
+                    <span className="rounded-full shrink-0" style={{ width: 10, height: 36, background: CATS[e.cat].bg }} />
+                    <div className="flex-1 text-right">
+                      <div className="font-bold flex items-center justify-end gap-1.5" style={{ fontSize: 15, color: C.ink }}>{e.title}{e.time ? <span style={{ fontSize: 12 }}>🔔</span> : null}</div>
+                      <div style={{ fontSize: 12, color: C.muted }}>{e.time ? `${e.time} · ` : ""}{CATS[e.cat].label}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => delEvent(e.id)}><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setModal("event")} className="w-full rounded-3xl py-4 flex items-center justify-center gap-2 text-white font-extrabold transition active:scale-95" style={{ fontSize: 16, background: T.cta, boxShadow: `0 14px 30px -16px ${T.swatch}` }}>
+              <Plus style={{ width: 20, height: 20 }} /> הוספת אירוע ליום זה
+            </button>
+          </div>
+        </Card>
+
+        {F.reminders && (
+        <Section icon={<Bell style={{ width: 22, height: 22, color: "#F59E0B" }} />} iconBg="#FDF3DC" title="תזכורות" badge={data.reminders.filter((r) => !r.fired).length || null} badgeColor="#F59E0B" open={open.reminders} onToggle={() => toggle("reminders")}>
+          <button onClick={() => setModal("reminder")} className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-white font-bold transition active:scale-95" style={{ fontSize: 14, background: "linear-gradient(95deg,#F59E0B,#EC4899)" }}><Plus style={{ width: 18, height: 18 }} /> תזכורת חדשה</button>
+          {data.reminders.length === 0 ? <div className="text-center py-2" style={{ fontSize: 12.5, color: C.muted }}>אין תזכורות. שימו לב: התראות עובדות בזמן שהאפליקציה פתוחה.</div> :
+            [...data.reminders].sort((a, b) => new Date(a.at) - new Date(b.at)).map((r) => (
+              <div key={r.id} className="flex items-center gap-3 rounded-2xl px-3 py-2.5" style={{ background: C.soft, opacity: r.fired ? 0.6 : 1 }}>
+                <Bell style={{ width: 16, height: 16, color: r.fired ? C.muted : "#F59E0B" }} />
+                <div className="flex-1 text-right"><div className="font-bold" style={{ fontSize: 14, color: C.ink, textDecoration: r.fired ? "line-through" : "none" }}>{r.text}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{new Date(r.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{r.fired ? " · בוצע" : ""}</div></div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => delReminder(r.id)}><Trash2 style={{ width: 16, height: 16, color: "#E0719A" }} /></button>
+                </div>
+              </div>
+            ))}
+        </Section>
+        )}
+
+        <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
+
+        <div className="flex flex-col items-center gap-1.5 pt-2">
+          {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
+          <button onClick={doSignOut} className="flex items-center gap-1.5 rounded-full px-4 py-2 font-bold transition active:scale-95" style={{ fontSize: 12.5, color: "#EF4444", background: "#FDECEC" }}>
+            <LogOut style={{ width: 14, height: 14 }} /> התנתקות
+          </button>
+        </div>
+      </div>
+
+      {openLetter && (() => {
+        const l = data.letters.find((x) => x.id === openLetter);
+        if (!l) return null;
+        return <LetterViewer letter={l} names={N} now={now} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
+      })()}
+      {modal === "letter" && (<Modal onClose={() => setModal(null)} accent={meColor}><WriteLetterForm from={me} names={N} onSave={addLetter} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={N} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
+      {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} coupleId={coupleId} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+<script>
+/* Build the app icon (sunset journal + heart) on a canvas, then wire up
+   favicon, apple-touch-icon and a web app manifest — all inline, no extra files. */
+(function () {
+  function roundRect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+  function heart(x, cx, cy, s, color) { x.save(); x.translate(cx, cy); x.scale(s / 32, s / 32); x.beginPath(); x.moveTo(0, 10); x.bezierCurveTo(-14, -4, -10, -20, 0, -10); x.bezierCurveTo(10, -20, 14, -4, 0, 10); x.closePath(); x.fillStyle = color; x.fill(); x.restore(); }
+  function makeIcon(S) {
+    var c = document.createElement("canvas"); c.width = c.height = S; var x = c.getContext("2d");
+    var g = x.createLinearGradient(0, 0, S, S); g.addColorStop(0, "#FF9F5A"); g.addColorStop(.55, "#FB6F7F"); g.addColorStop(1, "#EE4F6E");
+    roundRect(x, 0, 0, S, S, S * 0.22); x.fillStyle = g; x.fill();
+    x.save(); x.translate(S * 0.5, S * 0.52); x.rotate(-0.05);
+    var bw = S * 0.46, bh = S * 0.56;
+    x.shadowColor = "rgba(120,20,40,.30)"; x.shadowBlur = S * 0.05; x.shadowOffsetY = S * 0.02;
+    roundRect(x, -bw / 2, -bh / 2, bw, bh, S * 0.07); x.fillStyle = "#FFFFFF"; x.fill();
+    x.shadowColor = "transparent";
+    roundRect(x, -bw / 2, -bh / 2, S * 0.11, bh, S * 0.055); x.fillStyle = "#F7C9DB"; x.fill();
+    heart(x, S * 0.03, 0, S * 0.30, "#EC4899");
+    x.restore();
+    return c.toDataURL("image/png");
+  }
+  function setLink(rel, href, sizes) {
+    var l = document.createElement("link"); l.rel = rel; l.href = href; if (sizes) l.setAttribute("sizes", sizes);
+    document.head.appendChild(l);
+  }
+  try {
+    var i192 = makeIcon(192), i512 = makeIcon(512);
+    setLink("icon", i192, "192x192");
+    setLink("apple-touch-icon", i192);
+    var startUrl = location.href.split("#")[0].split("?")[0];
+    var scope = startUrl.replace(/[^/]*$/, "");
+    var manifest = {
+      name: "היומן של אסף וליאל", short_name: "היומן שלנו",
+      description: "היומן הזוגי שלנו", start_url: startUrl, scope: scope,
+      display: "standalone", orientation: "portrait",
+      background_color: "#FDF1F4", theme_color: "#EE4F6E", lang: "he", dir: "rtl",
+      icons: [
+        { src: i192, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: i512, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    var blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    setLink("manifest", URL.createObjectURL(blob));
+  } catch (e) { console.error("icon/manifest setup failed", e); }
+})();
+</script>
+</body>
+</html>
