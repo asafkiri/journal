@@ -658,7 +658,7 @@ function scheduleWorker(id, topic, message, fireAtMs) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, topic, message, fireAt: fireAtMs, title: "היומן שלנו ❤️" }),
-  }).then(function (r) { return r.text(); }).then(function (t) { alert("✅ נשלח לשרת! תשובה: " + t); }).catch(function (e) { alert("❌ שגיאה בשליחה: " + e.message); });
+  }).then(function (r) { return r.text(); }).then(function (t) { alert("✅ נשלח לשרת!\nה-TOPIC שלך הוא: " + topic + "\n\nתשובה: " + t); }).catch(function (e) { alert("❌ שגיאה בשליחה: " + e.message); });
 }
 
 function cancelWorker(id) {
