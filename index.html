@@ -650,20 +650,15 @@ function sendNtfy(topic, message) {
   } catch (e) {}
 }
 
-const WORKER_URL = "https://journal-notifier.asafkiri.workers.dev";
-
-function scheduleWorker(id, topic, message, fireAtMs) {
-  if (!topic || !id) { alert("דילוג: חסר topic או id (topic=" + topic + ")"); return; }
-  fetch(WORKER_URL + "/schedule", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, topic, message, fireAt: fireAtMs, title: "היומן שלנו ❤️" }),
-  }).then(function (r) { return r.text(); }).then(function (t) { alert("✅ נשלח לשרת!\nה-TOPIC שלך הוא: " + topic + "\n\nתשובה: " + t); }).catch(function (e) { alert("❌ שגיאה בשליחה: " + e.message); });
-}
-
-function cancelWorker(id) {
-  if (!id) return;
-  fetch(WORKER_URL + "/schedule/" + id, { method: "DELETE" }).catch(function () {});
+function scheduleNtfy(topic, fireAtMs, message) {
+  if (!topic) return;
+  try {
+    fetch("https://ntfy.sh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, title: "היומן שלנו ❤️", message: message || "", tags: ["bell"], delay: String(Math.round(fireAtMs / 1000)) }),
+    }).catch(function () {});
+  } catch (e) {}
 }
 
 function ReminderForm({ onSave, onClose }) {
@@ -1344,32 +1339,31 @@ function App() {
   useEffect(() => {
     if (!data || !data.ntfyOn || !data.ntfyTopic) return;
     const nowMs = Date.now();
+    const maxMs = nowMs + 3 * 864e5; // ntfy.sh allows scheduling up to 3 days ahead
     const toSend = [];
     let changed = false;
     const events = data.events.map((e) => {
       if (!e.at) return e;
       const fireAt = new Date(e.at).getTime() - (e.notifyMin || 0) * 60000;
-      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && e.ntfySched !== fireAt) {
-        const schedId = "ev-" + e.id;
-        toSend.push({ id: schedId, fireAt, msg: "🗓️ " + e.title + (e.time ? " · " + e.time : "") });
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && e.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🗓️ " + e.title + (e.time ? " · " + e.time : "") });
         changed = true;
-        return { ...e, ntfySched: fireAt, schedId };
+        return { ...e, ntfySched: fireAt };
       }
       return e;
     });
     const reminders = data.reminders.map((r) => {
       if (r.fired || !r.at) return r;
       const fireAt = new Date(r.at).getTime();
-      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && r.ntfySched !== fireAt) {
-        const schedId = "rm-" + r.id;
-        toSend.push({ id: schedId, fireAt, msg: "🔔 " + r.text });
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && r.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🔔 " + r.text });
         changed = true;
-        return { ...r, ntfySched: fireAt, schedId };
+        return { ...r, ntfySched: fireAt };
       }
       return r;
     });
     if (changed) {
-      toSend.forEach((s) => scheduleWorker(s.id, data.ntfyTopic, s.msg, s.fireAt));
+      toSend.forEach((s) => scheduleNtfy(data.ntfyTopic, s.fireAt, s.msg));
       setData((d) => ({ ...d, events, reminders }));
     }
   }, [data]);
@@ -1507,7 +1501,7 @@ function App() {
   const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true, photo: null } : l) }));
   const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
   const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
-  const delEvent = (id) => { const ev = data.events.find((e) => e.id === id); if (ev && ev.schedId) cancelWorker(ev.schedId); setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) })); };
+  const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
   const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
   const delCountdown = (id) => { setData((d) => ({ ...d, countdowns: d.countdowns.filter((x) => x.id !== id) })); setModal(null); setCdTarget(null); };
   const saveSettings = (s) => { setData((d) => ({ ...d, ...s })); setModal(null); };
@@ -1519,7 +1513,7 @@ function App() {
   const toggleWatch = (id) => setData((d) => ({ ...d, watchlist: d.watchlist.map((x) => x.id === id ? { ...x, done: !x.done } : x) }));
   const delWatch = (id) => setData((d) => ({ ...d, watchlist: d.watchlist.filter((x) => x.id !== id) }));
   const addReminder = (r) => { setData((d) => ({ ...d, reminders: [...d.reminders, r] })); setModal(null); };
-  const delReminder = (id) => { const r = data.reminders.find((x) => x.id === id); if (r && r.schedId) cancelWorker(r.schedId); setData((d) => ({ ...d, reminders: d.reminders.filter((x) => x.id !== id) })); };
+  const delReminder = (id) => setData((d) => ({ ...d, reminders: d.reminders.filter((x) => x.id !== id) }));
   const openCd = (target) => { setCdTarget(target); setModal("countdown"); };
 
   return (
