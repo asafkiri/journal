@@ -298,24 +298,87 @@ function approxBytes(durl) { const i = durl.indexOf(","); return Math.ceil((durl
 /* Compresses an image as small as possible while keeping it viewable on a phone.
    Prefers WebP (much smaller), falls back to JPEG. Shrinks quality first, then
    dimensions, until the result fits the byte budget (default ~50KB). */
+function getImageOrientation(file) {
+  return new Promise((resolve) => {
+    try {
+      const name = String((file && file.name) || "").toLowerCase();
+      const type = String((file && file.type) || "").toLowerCase();
+      if (!(type.includes("jpeg") || type.includes("jpg") || /\.jpe?g$/.test(name))) return resolve(1);
+      const reader = new FileReader();
+      reader.onerror = () => resolve(1);
+      reader.onload = (e) => {
+        try {
+          const view = new DataView(e.target.result);
+          if (view.getUint16(0, false) !== 0xFFD8) return resolve(1);
+          let offset = 2;
+          const length = view.byteLength;
+          while (offset < length) {
+            if (offset + 4 > length) break;
+            const marker = view.getUint16(offset, false);
+            offset += 2;
+            if (marker === 0xFFE1) {
+              if (offset + 8 > length) break;
+              const segmentLength = view.getUint16(offset, false);
+              offset += 2;
+              if (view.getUint32(offset, false) !== 0x45786966) return resolve(1);
+              offset += 6;
+              const little = view.getUint16(offset, false) === 0x4949;
+              offset += view.getUint32(offset + 4, little);
+              if (offset + 2 > length) break;
+              const tags = view.getUint16(offset, little);
+              offset += 2;
+              for (let i = 0; i < tags; i++) {
+                const tagOffset = offset + (i * 12);
+                if (tagOffset + 10 > length) break;
+                if (view.getUint16(tagOffset, little) === 0x0112) return resolve(view.getUint16(tagOffset + 8, little) || 1);
+              }
+              return resolve(1);
+            } else if ((marker & 0xFF00) !== 0xFF00) {
+              break;
+            } else {
+              if (offset + 2 > length) break;
+              offset += view.getUint16(offset, false);
+            }
+          }
+        } catch (e) {}
+        resolve(1);
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (e) { resolve(1); }
+  });
+}
+
 function fileToDataURL(file, opts = {}) {
   const maxDim = opts.maxDim || 1000;
   const budget = opts.budgetBytes || 90 * 1024;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const img = new Image();
       img.onerror = reject;
-      img.onload = () => {
+      img.onload = async () => {
         const type = supportsWebp() ? "image/webp" : "image/jpeg";
+        const orientation = await getImageOrientation(file);
         const render = (dim, q) => {
           const scale = Math.min(1, dim / Math.max(img.width, img.height));
           const w = Math.max(1, Math.round(img.width * scale));
           const h = Math.max(1, Math.round(img.height * scale));
+          const needsSwap = [5, 6, 7, 8].includes(orientation);
           const cv = document.createElement("canvas");
-          cv.width = w; cv.height = h;
-          cv.getContext("2d").drawImage(img, 0, 0, w, h);
+          cv.width = needsSwap ? h : w;
+          cv.height = needsSwap ? w : h;
+          const ctx = cv.getContext("2d");
+          switch (orientation) {
+            case 2: ctx.translate(w, 0); ctx.scale(-1, 1); break;
+            case 3: ctx.translate(w, h); ctx.rotate(Math.PI); break;
+            case 4: ctx.translate(0, h); ctx.scale(1, -1); break;
+            case 5: ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1); break;
+            case 6: ctx.rotate(0.5 * Math.PI); ctx.translate(0, -h); break;
+            case 7: ctx.rotate(0.5 * Math.PI); ctx.translate(w, -h); ctx.scale(-1, 1); break;
+            case 8: ctx.rotate(-0.5 * Math.PI); ctx.translate(-w, 0); break;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
           return cv.toDataURL(type, q);
         };
         try {
@@ -1478,7 +1541,13 @@ function App() {
       setData((d) => ({ ...d, events, reminders }));
     }
   }, [data]);
-  const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake || l.createdAt + l.durationHours * 3600000 > now).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
+  const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => {
+    const locked = l.openAt && l.openAt > now;
+    const stillActive = l.createdAt + l.durationHours * 3600000 > now;
+    // מכתבים שנשמרו "לתמיד"/כמזכרת מופיעים רק בתוך "המזכרות שלנו".
+    // חריג: מכתב חתום עתידי עדיין מוצג ברשימה הראשית עד תאריך הפתיחה, כדי שלא ייעלם לגמרי.
+    return locked || (!l.keepsake && stillActive);
+  }).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
   const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake && (!l.openAt || l.openAt <= now)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
   const sortedCds = useMemo(() => !data ? [] : [...data.countdowns].sort((a, b) => new Date(a.date) - new Date(b.date)), [data]);
   const eventsByDate = useMemo(() => { const map = {}; if (data) for (const e of data.events) { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); } return map; }, [data]);
