@@ -578,19 +578,24 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
   const [openDate, setOpenDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
   const fileRef = useRef(null);
   const accent = from === "b" ? "#EC4899" : "#3B82F6";
   const keep = dur === 0;
   const tomorrow = isoOf(new Date(Date.now() + 864e5));
   async function pick(e) { const f = e.target.files && e.target.files[0]; if (!f) return; setBusy(true); setErr(""); try { setPhoto(await fileToDataURL(f)); } catch { setErr("לא הצלחנו לטעון את התמונה"); } finally { setBusy(false); } }
   function submit() {
+    if (sendingRef.current) return;
     if (!text.trim()) return;
     if (sealed) {
       if (!openDate) { setErr("בחרו תאריך פתיחה"); return; }
       const openAt = new Date(openDate + "T08:00:00").getTime();
       if (isNaN(openAt) || openAt <= Date.now()) { setErr("בחרו תאריך עתידי"); return; }
+      sendingRef.current = true; setSending(true);
       onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
     } else {
+      sendingRef.current = true; setSending(true);
       onSave({ id: uid(), from, text: text.trim(), photo: keep ? null : photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
     }
   }
@@ -642,8 +647,8 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
         <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול עד התאריך שתבחרו, ואז ייפתח אוטומטית. התמונה תוצג עם הפתיחה ותישמר כחודש — המילים יישארו במזכרות לתמיד 💜</div>
       </>)}
       {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
-      <button disabled={!text.trim()} onClick={submit}
-        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>שליחת המכתב 💗</button>
+      <button disabled={sending || !text.trim()} onClick={submit}
+        className="w-full rounded-3xl py-4 text-white font-extrabold transition active:scale-95 disabled:opacity-40" style={{ fontSize: 16, background: `linear-gradient(95deg, ${accent}, #F472B6)` }}>{sending ? "שולח…" : "שליחת המכתב 💗"}</button>
     </div>
   );
 }
@@ -2046,7 +2051,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v20</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v21</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
