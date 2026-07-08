@@ -928,12 +928,26 @@ function MoodCard({ names, moodA, moodB, open, onOpen, onPick }) {
   );
 }
 
-function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClose }) {
+function LetterViewer({ letter, names, now, coupleId, onReact, onKeepsake, onDelete, onClose }) {
   const accent = letter.from === "b" ? "#EC4899" : "#3B82F6";
   const remaining = letter.createdAt + letter.durationHours * 3600000 - now;
   const cardRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [imgPreview, setImgPreview] = useState(null);
+  const [photoData, setPhotoData] = useState(letter.photo || null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  // old letters carry the photo inline; new ones live in couples/{cid}/photos/{id}.
+  // skip loading while still sealed, so a locked letter never fetches its image.
+  useEffect(() => {
+    let alive = true;
+    if (letter.photo) { setPhotoData(letter.photo); return; }
+    setPhotoData(null);
+    if (letter.hasPhoto && coupleId && !(letter.openAt && letter.openAt > Date.now())) {
+      setPhotoLoading(true);
+      loadPhotoDoc(coupleId, letter.id).then((p) => { if (alive) { setPhotoData(p); setPhotoLoading(false); } });
+    }
+    return () => { alive = false; };
+  }, [letter.id, letter.photo, letter.hasPhoto, coupleId]);
   const dateStr = new Date(letter.createdAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" });
   async function saveImage() {
     if (saving || !window.html2canvas || !cardRef.current) return;
@@ -974,7 +988,8 @@ function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClo
           <div className="flex items-center gap-2"><Heart style={{ width: 22, height: 22, fill: accent, color: accent }} /><span style={{ fontFamily: SCRIPT, fontSize: 24, color: C.ink }}>מאת: {names[letter.from]}</span></div>
           <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
         </div>
-        {letter.photo && <img src={letter.photo} alt="" className="w-full rounded-2xl object-cover mb-4" style={{ maxHeight: 360 }} />}
+        {photoLoading && <div className="w-full rounded-2xl mb-4 grid place-items-center" style={{ height: 180, background: "#F6EEF2", color: C.muted, fontSize: 13 }}>טוען תמונה…</div>}
+        {photoData && <img src={photoData} alt="" className="w-full rounded-2xl object-cover mb-4" style={{ maxHeight: 360 }} />}
         <p className="whitespace-pre-wrap mb-4" style={{ fontSize: 16.5, color: C.ink, lineHeight: 1.75 }}>{letter.text}</p>
         <div className="flex items-center justify-center gap-1.5 mb-4" style={{ fontSize: 12.5, color: C.muted }}>
           <Calendar style={{ width: 14, height: 14 }} /><span style={{ fontFamily: SCRIPT, fontSize: 14 }}>נוצר ביומן הזוגי של {names.a} ו{names.b} ❤️</span>
@@ -1003,7 +1018,7 @@ function LetterViewer({ letter, names, now, onReact, onKeepsake, onDelete, onClo
         <div style={{ background: "#fff", borderRadius: 26, padding: 26, borderTop: `6px solid ${accent}`, boxShadow: "0 18px 40px -20px rgba(150,40,80,.5)" }}>
           <div style={{ textAlign: "center", fontFamily: SCRIPT, fontSize: 30, color: accent, lineHeight: 1.1 }}>מאת {names[letter.from]} 💌</div>
           <div style={{ textAlign: "center", fontSize: 13, color: C.muted, marginTop: 4, marginBottom: 18 }}>{dateStr}</div>
-          {letter.photo && <img src={letter.photo} alt="" style={{ width: "100%", borderRadius: 18, marginBottom: 18, display: "block" }} />}
+          {photoData && <img src={photoData} alt="" style={{ width: "100%", borderRadius: 18, marginBottom: 18, display: "block" }} />}
           <div style={{ whiteSpace: "pre-wrap", fontSize: 18, color: C.ink, lineHeight: 1.8, textAlign: "center" }}>{letter.text}</div>
           {letter.reaction && <div style={{ textAlign: "center", fontSize: 30, marginTop: 16 }}>{letter.reaction}</div>}
           <div style={{ textAlign: "center", marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.line}`, fontFamily: SCRIPT, fontSize: 17, color: "#C58AA0" }}>היומן של {names.a} ו{names.b} ❤️</div>
@@ -1719,9 +1734,22 @@ function App() {
   const saveDailyAnswer = (text) => setData((d) => { const day = { ...((d.dailyAnswers && d.dailyAnswers[todayISO]) || {}) }; day[me] = text; return { ...d, dailyAnswers: { ...(d.dailyAnswers || {}), [todayISO]: day }, activityDates: act(d) }; });
 
   /* mutations */
-  const addLetter = (l) => { localLettersRef.current.add(l.id); setData((d) => ({ ...d, letters: [...d.letters, l], activityDates: act(d) })); setModal(null); if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from])); };
+  const addLetter = async (l) => {
+    let letter = l;
+    const photo = l.photo || null;
+    if (photo) {
+      const ok = await savePhotoDoc(coupleId, l.id, photo).catch(() => false);
+      // success → photo lives in the subcollection, keep only a flag in the doc.
+      // failure → fall back to storing it inline so nothing is lost.
+      letter = ok ? { ...l, photo: null, hasPhoto: true } : { ...l, hasPhoto: false };
+    }
+    localLettersRef.current.add(l.id);
+    setData((d) => ({ ...d, letters: [...d.letters, letter], activityDates: act(d) }));
+    setModal(null);
+    if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from]));
+  };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
-  const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true, photo: null } : l) }));
+  const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true, photo: null, hasPhoto: false } : l) }));
   const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
   const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
   const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
@@ -1887,6 +1915,7 @@ function App() {
               <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
                 <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: accent }} />
                 {l.photo ? <img src={l.photo} alt="" className="rounded-2xl object-cover shrink-0" style={{ width: 48, height: 48 }} />
+                  : l.hasPhoto ? <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: `${accent}1f` }}><ImageIcon style={{ width: 20, height: 20, color: accent }} /></div>
                   : <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: `${accent}1f` }}><Heart style={{ width: 20, height: 20, fill: accent, color: accent }} /></div>}
                 <div className="flex-1 min-w-0 text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -2017,7 +2046,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v19</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v20</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
@@ -2030,7 +2059,7 @@ function App() {
       {openLetter && (() => {
         const l = data.letters.find((x) => x.id === openLetter);
         if (!l) return null;
-        return <LetterViewer letter={l} names={N} now={now} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
+        return <LetterViewer letter={l} names={N} now={now} coupleId={coupleId} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
       })()}
       {modal === "letter" && (<Modal onClose={() => setModal(null)} accent={meColor}><WriteLetterForm from={me} names={N} onSave={addLetter} onClose={() => setModal(null)} /></Modal>)}
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
