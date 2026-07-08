@@ -349,6 +349,31 @@ function translateAuthError(e) {
   return "שגיאה: " + ((e && e.message) || c || "לא ידוע");
 }
 
+const CHAT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CHAT_MAX_MESSAGES = 200;
+function cleanChatMessages(messages, nowMs = Date.now()) {
+  const cutoff = nowMs - CHAT_TTL_MS;
+  return (Array.isArray(messages) ? messages : [])
+    .filter((m) => m && typeof m.text === "string" && (Number(m.createdAt) || 0) >= cutoff)
+    .map((m) => ({
+      id: m.id || uid(),
+      from: m.from === "b" ? "b" : "a",
+      text: String(m.text || "").slice(0, 600),
+      createdAt: Number(m.createdAt) || Date.now(),
+    }))
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .slice(-CHAT_MAX_MESSAGES);
+}
+function sameChatMessages(a, b) {
+  const x = Array.isArray(a) ? a : [];
+  const y = Array.isArray(b) ? b : [];
+  if (x.length !== y.length) return false;
+  for (let i = 0; i < x.length; i++) {
+    if (x[i].id !== y[i].id || x[i].text !== y[i].text || x[i].from !== y[i].from || x[i].createdAt !== y[i].createdAt) return false;
+  }
+  return true;
+}
+
 /* ============================ seed + normalize ============================ */
 function buildSeed() {
   return {
@@ -363,6 +388,7 @@ function buildSeed() {
     ntfyOn: false,
     ntfyTopic: "",
     dailyAnswers: {},
+    chatMessages: [],
     roulette: ["מי בוחר סרט 🎬", "מי מכין ארוחה 🍳", "נשיקה 💋", "חיבוק גדול 🤗", "מי שוטף כלים 🧽", "10 דק׳ עיסוי 💆"],
     countdowns: [],
     letters: [],
@@ -393,6 +419,7 @@ function normalize(d) {
   out.ntfyTopic = d.ntfyTopic || "";
   out.roulette = Array.isArray(d.roulette) ? d.roulette : s.roulette;
   out.dailyAnswers = (d.dailyAnswers && typeof d.dailyAnswers === "object") ? d.dailyAnswers : {};
+  out.chatMessages = cleanChatMessages(d.chatMessages || []);
   if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
   else out.countdowns = d.countdowns;
   return out;
@@ -685,7 +712,7 @@ function ReminderForm({ onSave, onClose }) {
   );
 }
 
-function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, coupleId, onTestNtfy, email, onResetPassword, onSave, onClose }) {
+function SettingsForm({ names, anniversary, theme, longDistance, people, features, ntfyOn, ntfyTopic, coupleId, onTestNtfy, onExportBackup, email, onResetPassword, onSave, onClose }) {
   const [a, setA] = useState(names.a);
   const [b, setB] = useState(names.b);
   const [ann, setAnn] = useState(anniversary ? anniversary.slice(0, 10) : "");
@@ -718,6 +745,12 @@ function SettingsForm({ names, anniversary, theme, longDistance, people, feature
           <input readOnly value={coupleId || ""} className={inputCls} style={{ ...inputStyle, direction: "ltr", textAlign: "left", fontSize: 13, fontWeight: 700 }} />
           <button onClick={copyCode} className="shrink-0 rounded-2xl px-3 py-2 font-bold text-white" style={{ fontSize: 12.5, background: "#EC4899" }}>{codeCopied ? "הועתק ✓" : "העתק"}</button>
         </div>
+      </div>
+
+      <div className="mb-5 rounded-2xl p-3" style={{ background: "#F7FBFF", border: "1px solid #DCEBFF" }}>
+        <div className="flex items-center gap-1.5 mb-2"><Cloud style={{ width: 16, height: 16, color: "#2563EB" }} /><span className="font-extrabold" style={{ fontSize: 13, color: "#1D4ED8" }}>גיבוי בטוח</span></div>
+        <div style={{ fontSize: 12, color: "#47638C", lineHeight: 1.6, marginBottom: 8 }}>הכפתור רק מוריד קובץ גיבוי למכשיר. הוא לא משנה ולא דורס שום מידע ביומן.</div>
+        <button onClick={onExportBackup} className="w-full rounded-2xl py-3 font-bold transition active:scale-95" style={{ fontSize: 14, background: "#fff", color: "#2563EB", border: "1px solid #BFD7FF" }}>הורדת גיבוי JSON</button>
       </div>
 
       <Label>השמות שלנו</Label>
@@ -1148,6 +1181,58 @@ function OnThisDayCard({ items, names }) {
   );
 }
 
+function RollingChatCard({ messages, names, me, meColor, partnerColor, msgTxt, setMsgTxt, onSend, msgSent, onDelete, ntfyOn }) {
+  const boxRef = useRef(null);
+  useEffect(() => {
+    if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
+  }, [messages && messages.length]);
+  const items = (messages || []).slice().sort((a, b) => a.createdAt - b.createdAt);
+  const fmtMsgTime = (ts) => {
+    const d = new Date(ts);
+    const today = isoOf(new Date());
+    const day = isoOf(d);
+    const time = d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+    if (day === today) return time;
+    return d.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }) + " · " + time;
+  };
+  return (
+    <Card className="fade-up p-3" style={{ animationDelay: ".08s" }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5"><span style={{ fontSize: 16 }}>💬</span><span className="font-extrabold" style={{ fontSize: 14, color: C.ink }}>הצ׳אט שלנו</span></div>
+        <span className="rounded-full px-2.5 py-1 font-bold" style={{ fontSize: 11, color: "#7C3AED", background: "#F3E8FF" }}>נשמר 7 ימים</span>
+      </div>
+      <div ref={boxRef} className="rounded-3xl p-2 mb-3" style={{ maxHeight: 265, overflowY: "auto", background: "linear-gradient(180deg,#FFF7FB,#F7F1FF)", border: `1px solid ${C.line}` }}>
+        {!items.length && (
+          <div className="text-center py-7" style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>אין עדיין הודעות השבוע.<br />שלחו משהו קטן ומתוק 💗</div>
+        )}
+        <div className="flex flex-col gap-2">
+          {items.map((m) => {
+            const mine = m.from === me;
+            const color = m.from === "b" ? "#EC4899" : "#3B82F6";
+            return (
+              <div key={m.id} className="flex flex-col" style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "84%" }}>
+                <div className="rounded-3xl px-3 py-2" style={mine ? { background: `linear-gradient(135deg, ${meColor}, #A855F7)`, color: "#fff", borderBottomRightRadius: 8, boxShadow: "0 10px 18px -14px rgba(80,40,120,.55)" } : { background: "#fff", color: C.ink, border: `1px solid ${C.line}`, borderBottomLeftRadius: 8 }}>
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <span className="font-extrabold" style={{ fontSize: 10.5, color: mine ? "rgba(255,255,255,.88)" : color }}>{names[m.from] || (m.from === "a" ? "אסף" : "ליאל")}</span>
+                    <button onClick={() => { if (window.confirm("למחוק את ההודעה מהצ׳אט של שניכם?")) onDelete(m.id); }} className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: mine ? "rgba(255,255,255,.18)" : "#F6EEF2" }} aria-label="מחיקת הודעה"><X style={{ width: 10, height: 10, color: mine ? "#fff" : "#D94A7C" }} /></button>
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</div>
+                </div>
+                <div style={{ alignSelf: mine ? "flex-end" : "flex-start", fontSize: 10.5, color: C.muted, marginTop: 3, paddingInline: 6 }}>{fmtMsgTime(m.createdAt)}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>✍️</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>{ntfyOn ? "שלח/י הודעה — תישמר וגם תישלח כהתראה" : "שלח/י הודעה — תישמר בצ׳אט"}</span></div>
+      <div className="flex gap-2">
+        <input value={msgTxt} onChange={(e) => setMsgTxt(e.target.value)} placeholder="כתבו משהו ושלחו…" className={inputCls} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") onSend(); }} />
+        <button onClick={onSend} disabled={!msgTxt.trim()} className="shrink-0 rounded-2xl px-5 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>{msgSent ? "✓" : "שלח"}</button>
+      </div>
+    </Card>
+  );
+}
+
 const ROULETTE_COLORS = ["#F472B6", "#A855F7", "#60A5FA", "#34D399", "#FBBF24", "#FB7185", "#818CF8", "#F59E0B"];
 function RouletteCard({ options, onAdd, onDelete }) {
   const [rot, setRot] = useState(0);
@@ -1242,6 +1327,9 @@ function App() {
   const [linkErr, setLinkErr] = useState("");
   const lastSavedRef = useRef("");
   const saveTimerRef = useRef(null);
+  const [saveRetryTick, setSaveRetryTick] = useState(0);
+  const [syncStatus, setSyncStatus] = useState("synced");
+  const [syncText, setSyncText] = useState("מסונכרן");
   const seenLettersRef = useRef(null);
   const localLettersRef = useRef(new Set());
 
@@ -1306,9 +1394,11 @@ function App() {
         norm.a = raw.a || null;
         norm.b = raw.b || null;
         lastSavedRef.current = JSON.stringify(norm);
+        setSyncStatus("synced");
+        setSyncText("מסונכרן");
         setData(norm);
       }
-    }, (err) => console.error("couple snapshot error", err));
+    }, (err) => { console.error("couple snapshot error", err); setSyncStatus("error"); setSyncText("שגיאת סנכרון"); });
     return () => unsub();
   }, [fb, user, verified, coupleId]);
 
@@ -1316,15 +1406,27 @@ function App() {
   useEffect(() => {
     if (!fb || !user || !data || !coupleId) return;
     const j = JSON.stringify(data);
-    if (j === lastSavedRef.current) return;
+    if (j === lastSavedRef.current) { setSyncStatus("synced"); setSyncText("מסונכרן"); return; }
+    setSyncStatus("saving");
+    setSyncText("שומר…");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      lastSavedRef.current = j;
       const obj = JSON.parse(j); delete obj.a; delete obj.b;
-      fb.setDoc(fb.doc(fb.db, "couples", coupleId), obj, { merge: true }).catch((e) => console.error("save failed", e));
+      fb.setDoc(fb.doc(fb.db, "couples", coupleId), obj, { merge: true })
+        .then(() => { lastSavedRef.current = j; setSyncStatus("synced"); setSyncText("נשמר"); })
+        .catch((e) => { console.error("save failed", e); setSyncStatus("error"); setSyncText("שגיאת שמירה — לחצו לנסות שוב"); });
     }, 400);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, [data, fb, user, coupleId]);
+  }, [data, fb, user, coupleId, saveRetryTick]);
+
+  // local safety backup only — does not write or restore anything by itself
+  useEffect(() => {
+    if (!data || !coupleId) return;
+    try {
+      const obj = JSON.parse(JSON.stringify(data)); delete obj.a; delete obj.b;
+      window.localStorage.setItem("loveJournalAutoBackup:" + coupleId, JSON.stringify({ app: "love-journal", coupleId, backedUpAt: new Date().toISOString(), data: obj }));
+    } catch (e) {}
+  }, [data, coupleId]);
 
   // mark reminders as done once their time passes (no in-app pop-up)
   useEffect(() => {
@@ -1334,6 +1436,15 @@ function App() {
     if (!due.length) return;
     setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
   }, [now]);
+
+  // keep rolling chat history to the last 7 days only
+  useEffect(() => {
+    if (!data) return;
+    const cleaned = cleanChatMessages(data.chatMessages || []);
+    if (!sameChatMessages(cleaned, data.chatMessages || [])) {
+      setData((d) => ({ ...d, chatMessages: cleanChatMessages(d.chatMessages || []) }));
+    }
+  }, [data && data.chatMessages, todayISO]);
 
   // schedule phone pushes (ntfy) for upcoming timed events & reminders — fires even when app is closed
   useEffect(() => {
@@ -1418,10 +1529,18 @@ function App() {
     if (!c) { setLinkErr("הזינו קוד"); return; }
     setLinkBusy(true);
     try {
-      await fb.setDoc(fb.doc(fb.db, "couples", c), { b: user.uid, names: { b: (name || "").trim() } }, { merge: true });
+      const cref = fb.doc(fb.db, "couples", c);
+      const snap = await fb.getDoc(cref);
+      if (!snap.exists()) { setLinkErr("לא נמצא יומן עם הקוד הזה"); return; }
+      const existing = snap.data() || {};
+      if (!existing.a) { setLinkErr("הקוד לא תקין"); return; }
+      if (existing.a === user.uid) { await fb.setDoc(fb.doc(fb.db, "users", user.uid), { coupleId: c }); return; }
+      if (existing.b && existing.b !== user.uid) { setLinkErr("היומן הזה כבר מלא"); return; }
+      const nextNames = { ...(existing.names || {}), b: (name || "").trim() };
+      await fb.setDoc(cref, { b: user.uid, names: nextNames }, { merge: true });
       await fb.setDoc(fb.doc(fb.db, "users", user.uid), { coupleId: c });
-    } catch (e) { console.error("join couple failed", e); setLinkErr("קוד לא תקין, או שהיומן כבר מלא"); setLinkBusy(false); return; }
-    setLinkBusy(false);
+    } catch (e) { console.error("join couple failed", e); setLinkErr("שגיאה בהצטרפות, בדקו את הקוד ונסו שוב"); }
+    finally { setLinkBusy(false); }
   }
 
   async function resendVerification() {
@@ -1481,13 +1600,37 @@ function App() {
   const coupleTitle = (data.names.a || data.names.b) ? `${data.names.a} ו${data.names.b}` : "היומן שלנו";
   const F = data.features || {};
   const partner = me === "a" ? "b" : "a";
+  const chatMessages = cleanChatMessages(data.chatMessages || [], now);
+  const syncDot = syncStatus === "error" ? "#EF4444" : syncStatus === "saving" ? "#F59E0B" : "#22C55E";
+  const syncBg = syncStatus === "error" ? "#FDECEC" : syncStatus === "saving" ? "#FFF7E6" : "#EAF7EE";
+  const syncColor = syncStatus === "error" ? "#DC2626" : syncStatus === "saving" ? "#B45309" : "#16A34A";
   const dayNum = Math.floor(new Date(todayISO + "T00:00:00").getTime() / 864e5);
   const todayQuestion = DAILY_QUESTIONS[((dayNum % DAILY_QUESTIONS.length) + DAILY_QUESTIONS.length) % DAILY_QUESTIONS.length];
   const todayAns = (data.dailyAnswers && data.dailyAnswers[todayISO]) || {};
   const myAns = todayAns[me] || null;
   const partnerAns = todayAns[partner] || null;
   const sendThinking = () => { if (!data.ntfyOn || !data.ntfyTopic) return; sendNtfy(data.ntfyTopic, "💭 " + N[me] + " חושב/ת עלייך עכשיו 🥰"); setThinkSent(true); setTimeout(() => setThinkSent(false), 2500); };
-  const sendMsg = () => { if (!data.ntfyOn || !data.ntfyTopic || !msgTxt.trim()) return; sendNtfy(data.ntfyTopic, "💬 " + N[me] + ": " + msgTxt.trim()); setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500); };
+  const sendMsg = () => {
+    const txt = msgTxt.trim();
+    if (!txt) return;
+    const message = { id: uid(), from: me, text: txt.slice(0, 600), createdAt: Date.now() };
+    setData((d) => ({ ...d, chatMessages: cleanChatMessages([...(d.chatMessages || []), message]), activityDates: act(d) }));
+    if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, "💬 " + N[me] + ": " + txt);
+    setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500);
+  };
+  const delChatMessage = (id) => setData((d) => ({ ...d, chatMessages: (d.chatMessages || []).filter((m) => m.id !== id) }));
+  const exportBackup = () => {
+    try {
+      const obj = JSON.parse(JSON.stringify(data)); delete obj.a; delete obj.b;
+      const payload = { app: "love-journal", exportedAt: new Date().toISOString(), coupleId, data: obj };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "yoman-zugi-backup-" + todayISO + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e) { console.error("backup export failed", e); alert("לא הצלחנו ליצור גיבוי במכשיר הזה"); }
+  };
   const addRoulette = (t) => setData((d) => ({ ...d, roulette: [...(d.roulette || []), t] }));
   const delRoulette = (i) => setData((d) => ({ ...d, roulette: (d.roulette || []).filter((_, idx) => idx !== i) }));
   const pendingWatch = data.watchlist.filter((w) => !w.done).length;
@@ -1550,10 +1693,10 @@ function App() {
             </button>
             <div className="flex items-center gap-1.5 shrink-0">
               <RoundBtn onClick={() => setModal("settings")} className="w-9 h-9" style={{ background: "#F4EEF1" }} aria-label="הגדרות"><span style={{ fontSize: 17, lineHeight: 1 }}>⚙️</span></RoundBtn>
-              <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ background: "#EAF7EE" }}>
-                <span className="rounded-full" style={{ width: 7, height: 7, background: "#22C55E", boxShadow: "0 0 0 3px #22C55E33" }} />
-                <span className="font-bold" style={{ fontSize: 11, color: "#16A34A" }}>מסונכרן</span>
-              </div>
+              <button onClick={() => syncStatus === "error" && setSaveRetryTick((x) => x + 1)} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ background: syncBg }}>
+                <span className="rounded-full" style={{ width: 7, height: 7, background: syncDot, boxShadow: `0 0 0 3px ${syncDot}33` }} />
+                <span className="font-bold" style={{ fontSize: 11, color: syncColor }}>{syncText}</span>
+              </button>
             </div>
           </div>
           {daysTogether != null && (
@@ -1583,15 +1726,7 @@ function App() {
           </button>
         )}
 
-        {data.ntfyOn && data.ntfyTopic && (
-          <Card className="fade-up p-3" style={{ animationDelay: ".08s" }}>
-            <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>💬</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>שלח/י הודעה עכשיו</span></div>
-            <div className="flex gap-2">
-              <input value={msgTxt} onChange={(e) => setMsgTxt(e.target.value)} placeholder="כתבו משהו ושלחו…" className={inputCls} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") sendMsg(); }} />
-              <button onClick={sendMsg} disabled={!msgTxt.trim()} className="shrink-0 rounded-2xl px-5 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>{msgSent ? "✓" : "שלח"}</button>
-            </div>
-          </Card>
-        )}
+        <RollingChatCard messages={chatMessages} names={N} me={me} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} msgTxt={msgTxt} setMsgTxt={setMsgTxt} onSend={sendMsg} msgSent={msgSent} onDelete={delChatMessage} ntfyOn={!!(data.ntfyOn && data.ntfyTopic)} />
 
         {F.dailyQ && <DailyQuestionCard question={todayQuestion} myAns={myAns} partnerAns={partnerAns} meName={N[me]} partnerName={N[partner]} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} onSave={saveDailyAnswer} />}
 
@@ -1820,7 +1955,7 @@ function App() {
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
       {modal === "countdown" && (<Modal onClose={() => { setModal(null); setCdTarget(null); }} accent="#F97316"><CountdownForm current={cdTarget} names={N} defaultBy={me} onSave={saveCountdown} onDelete={delCountdown} onClose={() => { setModal(null); setCdTarget(null); }} /></Modal>)}
       {modal === "reminder" && (<Modal onClose={() => setModal(null)} accent="#F59E0B"><ReminderForm onSave={addReminder} onClose={() => setModal(null)} /></Modal>)}
-      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} coupleId={coupleId} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
+      {modal === "settings" && (<Modal onClose={() => setModal(null)} accent="#EC4899"><SettingsForm names={data.names} anniversary={data.anniversary} theme={data.theme} longDistance={data.longDistance} people={data.people} features={data.features} ntfyOn={data.ntfyOn} ntfyTopic={data.ntfyTopic} coupleId={coupleId} onTestNtfy={(t) => sendNtfy(t, "🔔 התראת בדיקה — אם קיבלת את זה, הכול עובד!")} onExportBackup={exportBackup} email={user.email} onResetPassword={doResetPassword} onSave={saveSettings} onClose={() => setModal(null)} /></Modal>)}
     </div>
   );
 }
