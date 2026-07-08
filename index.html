@@ -31,7 +31,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAan_Ogz5E2K-6nJtlLvpFiLXiUYSDXxyM",
@@ -48,7 +48,7 @@
   const db = getFirestore(app);
   try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
 
-  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, onSnapshot };
+  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, deleteDoc, onSnapshot };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
@@ -391,6 +391,56 @@ function sameChatMessages(a, b) {
   }
   return true;
 }
+// A sealed letter keeps its photo for a grace window AFTER it opens (so you both have
+// time to see the reveal, even if one of you doesn't open the app daily); after that only
+// the words remain in the keepsakes folder. Change this one number to tune the window.
+const SEALED_PHOTO_GRACE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// Drops expired timed letters entirely (text + photo) to keep the shared doc small.
+// Keepsakes (incl. sealed letters) are never auto-removed — only manual delete removes them.
+function cleanLetters(letters, nowMs = Date.now()) {
+  return (Array.isArray(letters) ? letters : [])
+    .filter((l) => {
+      if (!l || typeof l.text !== "string") return false;
+      if (l.keepsake) return true;
+      const dur = Number(l.durationHours) || 24;
+      return (Number(l.createdAt) || 0) + dur * 3600000 > nowMs;
+    })
+    .map((l) => (l && l.photo && l.openAt && nowMs > Number(l.openAt) + SEALED_PHOTO_GRACE_MS) ? { ...l, photo: null } : l);
+}
+// True when two letter lists match on what cleanLetters can change: which letters exist,
+// and whether each still has a photo. Used to know when a cleanup needs to be saved.
+function sameLetters(a, b) {
+  const x = Array.isArray(a) ? a : [], y = Array.isArray(b) ? b : [];
+  if (x.length !== y.length) return false;
+  for (let i = 0; i < x.length; i++) {
+    if (x[i].id !== y[i].id || !!x[i].photo !== !!y[i].photo) return false;
+  }
+  return true;
+}
+
+/* ---- letter photos live in couples/{cid}/photos/{letterId}, OUT of the main doc ----
+   Keeps the couple doc small & fast (every save re-uploads the whole doc), and removes
+   the 1MB ceiling. Each helper returns a promise; callers handle their own loading UI. */
+async function savePhotoDoc(coupleId, letterId, dataUrl) {
+  const fb = window.__fb;
+  if (!fb || !coupleId || !letterId || !dataUrl) return false;
+  await fb.setDoc(fb.doc(fb.db, "couples", coupleId, "photos", letterId), { photo: dataUrl, updatedAt: Date.now() });
+  return true;
+}
+async function loadPhotoDoc(coupleId, letterId) {
+  const fb = window.__fb;
+  if (!fb || !coupleId || !letterId) return null;
+  try {
+    const snap = await fb.getDoc(fb.doc(fb.db, "couples", coupleId, "photos", letterId));
+    return snap && snap.exists() ? (snap.data().photo || null) : null;
+  } catch (e) { return null; }
+}
+async function deletePhotoDoc(coupleId, letterId) {
+  const fb = window.__fb;
+  if (!fb || !coupleId || !letterId) return false;
+  try { await fb.deleteDoc(fb.doc(fb.db, "couples", coupleId, "photos", letterId)); return true; }
+  catch (e) { return false; }
+}
 
 /* ============================ seed + normalize ============================ */
 function buildSeed() {
@@ -539,7 +589,7 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
       if (!openDate) { setErr("בחרו תאריך פתיחה"); return; }
       const openAt = new Date(openDate + "T08:00:00").getTime();
       if (isNaN(openAt) || openAt <= Date.now()) { setErr("בחרו תאריך עתידי"); return; }
-      onSave({ id: uid(), from, text: text.trim(), photo: null, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
+      onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
     } else {
       onSave({ id: uid(), from, text: text.trim(), photo: keep ? null : photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
     }
@@ -560,20 +610,22 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
         <button onClick={() => setSealed(true)} className="rounded-2xl py-2.5 font-bold transition active:scale-95" style={sealed ? { fontSize: 13, background: "#7C3AED", color: "#fff" } : { fontSize: 13, background: "#F6EEF2", color: C.muted }}>🔒 מכתב חתום</button>
       </div>
 
+      {/* photo picker — available for both regular and sealed letters */}
+      <Label>תמונה (לא חובה)</Label>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pick} />
+      {photo ? (
+        <div className="relative mb-3">
+          <img src={photo} alt="" className="w-full rounded-2xl object-cover" style={{ maxHeight: 240 }} />
+          <RoundBtn onClick={() => setPhoto(null)} className="w-8 h-8 absolute top-2 left-2" style={{ background: "rgba(0,0,0,.5)" }}><X style={{ width: 16, height: 16, color: "#fff" }} /></RoundBtn>
+        </div>
+      ) : (
+        <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full mb-3 rounded-2xl py-4 grid place-items-center gap-1 transition active:scale-95" style={{ border: "1.5px dashed #E7C6D2", background: "#FBF4F7", color: accent }}>
+          <ImagePlus style={{ width: 24, height: 24 }} />
+          <span className="font-semibold" style={{ fontSize: 13 }}>{busy ? "טוען…" : "הוספת תמונה"}</span>
+        </button>
+      )}
+
       {!sealed && (<>
-        <Label>תמונה (לא חובה)</Label>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pick} />
-        {photo ? (
-          <div className="relative mb-3">
-            <img src={photo} alt="" className="w-full rounded-2xl object-cover" style={{ maxHeight: 240 }} />
-            <RoundBtn onClick={() => setPhoto(null)} className="w-8 h-8 absolute top-2 left-2" style={{ background: "rgba(0,0,0,.5)" }}><X style={{ width: 16, height: 16, color: "#fff" }} /></RoundBtn>
-          </div>
-        ) : (
-          <button onClick={() => fileRef.current && fileRef.current.click()} className="w-full mb-3 rounded-2xl py-4 grid place-items-center gap-1 transition active:scale-95" style={{ border: "1.5px dashed #E7C6D2", background: "#FBF4F7", color: accent }}>
-            <ImagePlus style={{ width: 24, height: 24 }} />
-            <span className="font-semibold" style={{ fontSize: 13 }}>{busy ? "טוען…" : "הוספת תמונה"}</span>
-          </button>
-        )}
         <Label>נעלם אחרי</Label>
         <div className="grid grid-cols-4 gap-2 mb-3">
           {[{ v: 12, l: "12 שעות" }, { v: 24, l: "24 שעות" }, { v: 48, l: "יומיים" }, { v: 0, l: "לתמיד" }].map((o) => (
@@ -587,7 +639,7 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
       {sealed && (<>
         <Label>נפתח בתאריך 🔒</Label>
         <input type="date" min={tomorrow} value={openDate} onChange={(e) => setOpenDate(e.target.value)} className={inputCls + " mb-2"} style={inputStyle} />
-        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול לשניכם עד התאריך שתבחרו, ואז ייפתח אוטומטית. (תמונה לא נשמרת במכתב חתום)</div>
+        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול עד התאריך שתבחרו, ואז ייפתח אוטומטית. התמונה תוצג עם הפתיחה ותישמר כחודש — המילים יישארו במזכרות לתמיד 💜</div>
       </>)}
       {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
       <button disabled={!text.trim()} onClick={submit}
@@ -1464,6 +1516,16 @@ function App() {
     }
   }, [data && data.chatMessages, todayISO]);
 
+  // auto-remove expired timed letters (text + photo), and strip photos from sealed
+  // letters once their grace window has passed — keeping the shared doc small
+  useEffect(() => {
+    if (!data) return;
+    const cleaned = cleanLetters(data.letters || []);
+    if (!sameLetters(cleaned, data.letters || [])) {
+      setData((d) => ({ ...d, letters: cleanLetters(d.letters || []) }));
+    }
+  }, [data && data.letters, todayISO]);
+
   // schedule phone pushes (ntfy) for upcoming timed events & reminders — fires even when app is closed
   useEffect(() => {
     if (!data || !data.ntfyOn || !data.ntfyTopic) return;
@@ -1955,7 +2017,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v16</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v19</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
