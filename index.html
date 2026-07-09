@@ -427,6 +427,14 @@ async function deletePhotoDoc(coupleId, letterId) {
   catch (e) { return false; }
 }
 
+// A sealed letter only counts as "delivered" once its RECIPIENT has opened it — that's
+// what moves it into the keepsakes folder. Letters written before this feature have no
+// `opened` field, so treat them as already delivered (they stay put in the folder).
+function sealedOpened(l) {
+  if (!l || !l.openAt) return true; // not a sealed letter
+  return l.opened === undefined ? true : !!l.opened;
+}
+
 /* ============================ seed + normalize ============================ */
 function buildSeed() {
   return {
@@ -561,6 +569,7 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
   const [dur, setDur] = useState(24);
   const [sealed, setSealed] = useState(false);
   const [openDate, setOpenDate] = useState("");
+  const [openTime, setOpenTime] = useState("08:00");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
@@ -568,17 +577,18 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
   const fileRef = useRef(null);
   const accent = from === "b" ? "#EC4899" : "#3B82F6";
   const keep = dur === 0;
-  const tomorrow = isoOf(new Date(Date.now() + 864e5));
+  const todayIso = isoOf(new Date());
   async function pick(e) { const f = e.target.files && e.target.files[0]; if (!f) return; setBusy(true); setErr(""); try { setPhoto(await fileToDataURL(f)); } catch { setErr("לא הצלחנו לטעון את התמונה"); } finally { setBusy(false); } }
   function submit() {
     if (sendingRef.current) return;
     if (!text.trim()) return;
     if (sealed) {
       if (!openDate) { setErr("בחרו תאריך פתיחה"); return; }
-      const openAt = new Date(openDate + "T08:00:00").getTime();
-      if (isNaN(openAt) || openAt <= Date.now()) { setErr("בחרו תאריך עתידי"); return; }
+      const openAt = new Date(openDate + "T" + (openTime || "08:00") + ":00").getTime();
+      if (isNaN(openAt)) { setErr("בחרו תאריך ושעה תקינים"); return; }
+      if (openAt <= Date.now()) { setErr("בחרו מועד עתידי"); return; }
       sendingRef.current = true; setSending(true);
-      onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
+      onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, opened: false, reaction: null });
     } else {
       sendingRef.current = true; setSending(true);
       onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
@@ -627,9 +637,12 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
       </>)}
 
       {sealed && (<>
-        <Label>נפתח בתאריך 🔒</Label>
-        <input type="date" min={tomorrow} value={openDate} onChange={(e) => setOpenDate(e.target.value)} className={inputCls + " mb-2"} style={inputStyle} />
-        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול עד התאריך שתבחרו, ואז ייפתח אוטומטית. התמונה תיחשף עם הפתיחה ותישמר יחד איתו במזכרות 💜</div>
+        <Label>נפתח בתאריך ובשעה 🔒</Label>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <input type="date" min={todayIso} value={openDate} onChange={(e) => setOpenDate(e.target.value)} className={inputCls} style={inputStyle} />
+          <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className={inputCls} style={inputStyle} />
+        </div>
+        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול עד המועד שתבחרו, ואז ייפתח אוטומטית. התמונה תיחשף עם הפתיחה ותישמר יחד איתו במזכרות 💜</div>
       </>)}
       {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
       <button disabled={sending || !text.trim()} onClick={submit}
@@ -918,7 +931,7 @@ function MoodCard({ names, moodA, moodB, open, onOpen, onPick }) {
   );
 }
 
-function LetterViewer({ letter, names, now, coupleId, onReact, onKeepsake, onDelete, onClose }) {
+function LetterViewer({ letter, names, now, coupleId, me, onOpened, onReact, onKeepsake, onDelete, onClose }) {
   const accent = letter.from === "b" ? "#EC4899" : "#3B82F6";
   const remaining = letter.createdAt + letter.durationHours * 3600000 - now;
   const cardRef = useRef(null);
@@ -959,13 +972,20 @@ function LetterViewer({ letter, names, now, coupleId, onReact, onKeepsake, onDel
     finally { setSaving(false); }
   }
   const locked = letter.openAt && letter.openAt > now;
+  // Opening is the recipient's moment: only they mark it opened, which is what sends it
+  // to the keepsakes folder. `opened === false` is strict so pre-feature letters (no such
+  // field) are never re-marked. The sender can read it, but that doesn't count as opening.
+  const isRecipient = me && letter.from && me !== letter.from;
+  useEffect(() => {
+    if (!locked && letter.opened === false && isRecipient && onOpened) onOpened();
+  }, [locked, letter.id, letter.opened, isRecipient]);
   if (locked) return (
     <Modal onClose={onClose} accent="#7C3AED">
       <div className="p-6 text-center">
         <div style={{ fontSize: 44, marginBottom: 10 }}>🔒</div>
         <div className="font-extrabold mb-1" style={{ fontSize: 18, color: C.ink }}>מכתב חתום מ{names[letter.from]}</div>
         <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.6 }}>המכתב נעול וייפתח אוטומטית ב:</div>
-        <div className="font-extrabold mb-5" style={{ fontSize: 17, color: "#7C3AED" }}>{new Date(letter.openAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" })}</div>
+        <div className="font-extrabold mb-5" style={{ fontSize: 17, color: "#7C3AED" }}>{new Date(letter.openAt).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" })} · {new Date(letter.openAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</div>
         <button onClick={onClose} className="w-full rounded-3xl py-3.5 text-white font-extrabold transition active:scale-95 mb-2" style={{ fontSize: 15, background: "linear-gradient(95deg,#7C3AED,#EC4899)" }}>סגירה</button>
         <button onClick={onDelete} className="w-full rounded-2xl py-2.5 font-bold transition active:scale-95" style={{ fontSize: 13, background: "transparent", color: "#EF4444" }}>מחיקת המכתב החתום</button>
       </div>
@@ -980,6 +1000,9 @@ function LetterViewer({ letter, names, now, coupleId, onReact, onKeepsake, onDel
         </div>
         {photoLoading && <div className="w-full rounded-2xl mb-4 grid place-items-center" style={{ height: 180, background: "#F6EEF2", color: C.muted, fontSize: 13 }}>טוען תמונה…</div>}
         {photoData && <img src={photoData} alt="" className="w-full rounded-2xl object-cover mb-4" style={{ maxHeight: 360 }} />}
+        {letter.opened === false && !isRecipient && (
+          <div className="rounded-2xl px-3 py-2 mb-4 text-center" style={{ fontSize: 12.5, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB" }}>🔓 המכתב נפתח — ממתין ש{names[me === "a" ? "b" : "a"]} תפתח אותו, ואז הוא יעבור למזכרות</div>
+        )}
         <p className="whitespace-pre-wrap mb-4" style={{ fontSize: 16.5, color: C.ink, lineHeight: 1.75 }}>{letter.text}</p>
         <div className="flex items-center justify-center gap-1.5 mb-4" style={{ fontSize: 12.5, color: C.muted }}>
           <Calendar style={{ width: 14, height: 14 }} /><span style={{ fontFamily: SCRIPT, fontSize: 14 }}>נוצר ביומן הזוגי של {names.a} ו{names.b} ❤️</span>
@@ -1583,19 +1606,29 @@ function App() {
       }
       return r;
     });
+    const letters = data.letters.map((l) => {
+      if (!l.openAt || l.opened !== false) return l;
+      const fireAt = Number(l.openAt);
+      if (!isNaN(fireAt) && fireAt > nowMs + 20000 && fireAt <= maxMs && l.ntfySched !== fireAt) {
+        toSend.push({ fireAt, msg: "🎁 המכתב החתום מ" + ((data.names && data.names[l.from]) || "") + " נפתח — בואו לקרוא אותו" });
+        changed = true;
+        return { ...l, ntfySched: fireAt };
+      }
+      return l;
+    });
     if (changed) {
       toSend.forEach((s) => scheduleNtfy(data.ntfyTopic, s.fireAt, s.msg));
-      setData((d) => ({ ...d, events, reminders }));
+      setData((d) => ({ ...d, events, reminders, letters }));
     }
   }, [data]);
-  const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake ? (l.openAt && l.openAt > now) : (l.createdAt + l.durationHours * 3600000 > now)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
-  const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake && (!l.openAt || l.openAt <= now)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
+  const visibleLetters = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake ? (l.openAt && !sealedOpened(l)) : (l.createdAt + l.durationHours * 3600000 > now)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
+  const keepsakes = useMemo(() => !data ? [] : data.letters.filter((l) => l.keepsake && sealedOpened(l)).sort((a, b) => b.createdAt - a.createdAt), [data, now]);
   const sortedCds = useMemo(() => !data ? [] : [...data.countdowns].sort((a, b) => new Date(a.date) - new Date(b.date)), [data]);
   const eventsByDate = useMemo(() => { const map = {}; if (data) for (const e of data.events) { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); } return map; }, [data]);
   const onThisDayItems = useMemo(() => {
     if (!data) return [];
     const t = new Date(); const dom = t.getDate(); const startMonth = new Date(t.getFullYear(), t.getMonth(), 1).getTime();
-    return data.letters.filter((l) => l.keepsake && l.text && (!l.openAt || l.openAt <= Date.now()) && new Date(l.createdAt).getDate() === dom && l.createdAt < startMonth)
+    return data.letters.filter((l) => l.keepsake && l.text && sealedOpened(l) && new Date(l.createdAt).getDate() === dom && l.createdAt < startMonth)
       .sort((a, b) => b.createdAt - a.createdAt).slice(0, 4)
       .map((l) => { const d = new Date(l.createdAt); const months = (t.getFullYear() - d.getFullYear()) * 12 + (t.getMonth() - d.getMonth()); let ago; if (months >= 12) { const y = Math.floor(months / 12); ago = y === 1 ? "לפני שנה" : "לפני " + y + " שנים"; } else { ago = months === 1 ? "לפני חודש" : "לפני " + months + " חודשים"; } return { text: l.text, from: l.from, ago }; });
   }, [data, todayISO]);
@@ -1761,9 +1794,11 @@ function App() {
     localLettersRef.current.add(l.id);
     setData((d) => ({ ...d, letters: [...d.letters, letter], activityDates: act(d) }));
     setModal(null);
-    if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from]));
+    if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL") + " בשעה " + new Date(l.openAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })) : ("💌 מכתב חדש מ" + N[l.from]));
   };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
+  // recipient opened a sealed letter → it graduates into the keepsakes folder
+  const markLetterOpened = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id && l.opened === false ? { ...l, opened: true } : l) }));
   // photos live in their own docs now, so a keepsake keeps its photo (no 1MB pressure)
   const keepsakeLetter = (id) => {
     setData((d) => ({ ...d, letters: d.letters.map((x) => x.id === id ? { ...x, keepsake: true } : x) }));
@@ -1922,15 +1957,19 @@ function App() {
           )}
           {visibleLetters.map((l) => {
             const locked = l.openAt && l.openAt > now;
+            const ready = l.openAt && !locked && !sealedOpened(l); // unlocked, awaiting its recipient
+            const forMe = l.from !== me;
             const accent = l.from === "b" ? "#EC4899" : "#3B82F6";
-            const tint = locked ? "#F3F0FF" : (l.from === "b" ? "#FFF5F9" : "#F4F8FF");
-            if (locked) return (
+            const tint = (locked || ready) ? "#F3F0FF" : (l.from === "b" ? "#FFF5F9" : "#F4F8FF");
+            if (locked || ready) return (
               <Card key={l.id} onClick={() => setOpenLetter(l.id)} className="relative p-3 pr-4 flex items-center gap-3 cursor-pointer transition hover:shadow-lg active:scale-95" style={{ background: tint, overflow: "hidden" }}>
                 <span style={{ position: "absolute", top: 10, bottom: 10, right: 0, width: 4, borderRadius: 99, background: "#7C3AED" }} />
-                <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: "#EBE3FB", fontSize: 22 }}>🔒</div>
+                <div className="rounded-2xl grid place-items-center shrink-0" style={{ width: 48, height: 48, background: "#EBE3FB", fontSize: 22 }}>{locked ? "🔒" : "🎁"}</div>
                 <div className="flex-1 min-w-0 text-right">
                   <div className="font-extrabold" style={{ fontSize: 15, color: C.ink }}>מכתב חתום מ{N[l.from]}</div>
-                  <div style={{ fontSize: 12.5, marginTop: 2, color: "#7C3AED" }}>נפתח ב-{new Date(l.openAt).toLocaleDateString("he-IL")} 🔒</div>
+                  {locked
+                    ? <div style={{ fontSize: 12.5, marginTop: 2, color: "#7C3AED" }}>נפתח ב-{new Date(l.openAt).toLocaleDateString("he-IL")} בשעה {new Date(l.openAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })} 🔒</div>
+                    : <div style={{ fontSize: 12.5, marginTop: 2, color: "#7C3AED" }}>{forMe ? "המכתב מוכן — לחצו לפתוח 💜" : "ממתין ש" + N[l.from === "a" ? "b" : "a"] + " תפתח"}</div>}
                 </div>
               </Card>
             );
@@ -2069,7 +2108,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v24</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v26</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
@@ -2082,7 +2121,7 @@ function App() {
       {openLetter && (() => {
         const l = data.letters.find((x) => x.id === openLetter);
         if (!l) return null;
-        return <LetterViewer letter={l} names={N} now={now} coupleId={coupleId} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
+        return <LetterViewer letter={l} names={N} now={now} coupleId={coupleId} me={me} onOpened={() => markLetterOpened(l.id)} onReact={(e) => reactLetter(l.id, e)} onKeepsake={() => keepsakeLetter(l.id)} onDelete={() => delLetter(l.id)} onClose={() => setOpenLetter(null)} />;
       })()}
       {modal === "letter" && (<Modal onClose={() => setModal(null)} accent={meColor}><WriteLetterForm from={me} names={N} onSave={addLetter} onClose={() => setModal(null)} /></Modal>)}
       {modal === "event" && (<Modal onClose={() => setModal(null)} accent="#7C3AED"><EventForm presetDate={selectedDate} onSave={addEvent} onClose={() => setModal(null)} /></Modal>)}
