@@ -581,7 +581,7 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
       onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: 1e6, keepsake: true, openAt, reaction: null });
     } else {
       sendingRef.current = true; setSending(true);
-      onSave({ id: uid(), from, text: text.trim(), photo: keep ? null : photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
+      onSave({ id: uid(), from, text: text.trim(), photo: photo, createdAt: Date.now(), durationHours: keep ? 1e6 : dur, keepsake: keep, reaction: null });
     }
   }
   return (
@@ -623,7 +623,7 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
               style={dur === o.v ? { fontSize: 12.5, background: accent, color: "#fff" } : { fontSize: 12.5, background: "#F6EEF2", color: C.muted }}>{o.l}</button>
           ))}
         </div>
-        {keep && photo && <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#9A7B2E", background: "#FFF8E8", border: "1px solid #FCE5BD" }}>מכתב "לתמיד" נשמר במזכרות — הטקסט יישמר, אך התמונה לא 💛</div>}
+        {keep && photo && <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#9A7B2E", background: "#FFF8E8", border: "1px solid #FCE5BD" }}>מכתב "לתמיד" יישמר במזכרות — יחד עם התמונה 💛</div>}
       </>)}
 
       {sealed && (<>
@@ -1764,10 +1764,9 @@ function App() {
     if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from]));
   };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
+  // photos live in their own docs now, so a keepsake keeps its photo (no 1MB pressure)
   const keepsakeLetter = (id) => {
-    const l = (data.letters || []).find((x) => x.id === id);
-    if (l && l.hasPhoto) deletePhotoDoc(coupleId, id);
-    setData((d) => ({ ...d, letters: d.letters.map((x) => x.id === id ? { ...x, keepsake: true, photo: null, hasPhoto: false } : x) }));
+    setData((d) => ({ ...d, letters: d.letters.map((x) => x.id === id ? { ...x, keepsake: true } : x) }));
   };
   const delLetter = (id) => {
     const l = (data.letters || []).find((x) => x.id === id);
@@ -2070,7 +2069,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v23</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v24</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
