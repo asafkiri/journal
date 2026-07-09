@@ -391,31 +391,16 @@ function sameChatMessages(a, b) {
   }
   return true;
 }
-// A sealed letter keeps its photo for a grace window AFTER it opens (so you both have
-// time to see the reveal, even if one of you doesn't open the app daily); after that only
-// the words remain in the keepsakes folder. Change this one number to tune the window.
-const SEALED_PHOTO_GRACE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-// Drops expired timed letters entirely (text + photo) to keep the shared doc small.
-// Keepsakes (incl. sealed letters) are never auto-removed — only manual delete removes them.
+// Drops expired timed letters so the letter list stays lean. Keepsakes (incl. sealed
+// letters) are never auto-removed — only a manual delete removes them. Photos live in a
+// separate subcollection now, so the caller deletes a dropped letter's photo doc.
 function cleanLetters(letters, nowMs = Date.now()) {
-  return (Array.isArray(letters) ? letters : [])
-    .filter((l) => {
-      if (!l || typeof l.text !== "string") return false;
-      if (l.keepsake) return true;
-      const dur = Number(l.durationHours) || 24;
-      return (Number(l.createdAt) || 0) + dur * 3600000 > nowMs;
-    })
-    .map((l) => (l && l.photo && l.openAt && nowMs > Number(l.openAt) + SEALED_PHOTO_GRACE_MS) ? { ...l, photo: null } : l);
-}
-// True when two letter lists match on what cleanLetters can change: which letters exist,
-// and whether each still has a photo. Used to know when a cleanup needs to be saved.
-function sameLetters(a, b) {
-  const x = Array.isArray(a) ? a : [], y = Array.isArray(b) ? b : [];
-  if (x.length !== y.length) return false;
-  for (let i = 0; i < x.length; i++) {
-    if (x[i].id !== y[i].id || !!x[i].photo !== !!y[i].photo) return false;
-  }
-  return true;
+  return (Array.isArray(letters) ? letters : []).filter((l) => {
+    if (!l || typeof l.text !== "string") return false;
+    if (l.keepsake) return true;
+    const dur = Number(l.durationHours) || 24;
+    return (Number(l.createdAt) || 0) + dur * 3600000 > nowMs;
+  });
 }
 
 /* ---- letter photos live in couples/{cid}/photos/{letterId}, OUT of the main doc ----
@@ -644,7 +629,7 @@ function WriteLetterForm({ from, names, onSave, onClose }) {
       {sealed && (<>
         <Label>נפתח בתאריך 🔒</Label>
         <input type="date" min={tomorrow} value={openDate} onChange={(e) => setOpenDate(e.target.value)} className={inputCls + " mb-2"} style={inputStyle} />
-        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול עד התאריך שתבחרו, ואז ייפתח אוטומטית. התמונה תוצג עם הפתיחה ותישמר כחודש — המילים יישארו במזכרות לתמיד 💜</div>
+        <div className="rounded-2xl px-3 py-2 mb-3 text-center" style={{ fontSize: 12, color: "#6D28D9", background: "#F3F0FF", border: "1px solid #DDD0FB", lineHeight: 1.5 }}>📦 המכתב יישאר נעול עד התאריך שתבחרו, ואז ייפתח אוטומטית. התמונה תיחשף עם הפתיחה ותישמר יחד איתו במזכרות 💜</div>
       </>)}
       {err && <div className="rounded-2xl px-4 py-2.5 mb-3 text-center font-bold" style={{ fontSize: 13, background: "#FDECEC", color: "#DC2626" }}>{err}</div>}
       <button disabled={sending || !text.trim()} onClick={submit}
@@ -1536,15 +1521,40 @@ function App() {
     }
   }, [data && data.chatMessages, todayISO]);
 
-  // auto-remove expired timed letters (text + photo), and strip photos from sealed
-  // letters once their grace window has passed — keeping the shared doc small
+  // auto-remove expired timed letters, and delete their photo docs too (no orphans)
   useEffect(() => {
     if (!data) return;
-    const cleaned = cleanLetters(data.letters || []);
-    if (!sameLetters(cleaned, data.letters || [])) {
+    const cur = data.letters || [];
+    const cleaned = cleanLetters(cur);
+    if (cleaned.length !== cur.length) {
+      const keptIds = new Set(cleaned.map((l) => l.id));
+      cur.forEach((l) => { if (!keptIds.has(l.id) && l.hasPhoto) deletePhotoDoc(coupleId, l.id); });
       setData((d) => ({ ...d, letters: cleanLetters(d.letters || []) }));
     }
   }, [data && data.letters, todayISO]);
+
+  // one-time migration: move any OLD inline photos out of the main doc into the photos
+  // subcollection, then clear them from the doc. Only clears a photo after it's safely
+  // saved; idempotent and safe even if both partners run it. Skips letters about to expire.
+  const photosMigratedRef = useRef(false);
+  useEffect(() => {
+    if (!data || !coupleId || photosMigratedRef.current) return;
+    const alive = new Set(cleanLetters(data.letters || []).map((l) => l.id));
+    const pending = (data.letters || []).filter((l) => l && typeof l.photo === "string" && l.photo && !l.hasPhoto && alive.has(l.id));
+    photosMigratedRef.current = true;
+    if (!pending.length) return;
+    (async () => {
+      const done = [];
+      for (const l of pending) {
+        const ok = await savePhotoDoc(coupleId, l.id, l.photo).catch(() => false);
+        if (ok) done.push(l.id);
+      }
+      if (done.length) {
+        const moved = new Set(done);
+        setData((d) => ({ ...d, letters: (d.letters || []).map((l) => moved.has(l.id) ? { ...l, photo: null, hasPhoto: true } : l) }));
+      }
+    })();
+  }, [data, coupleId]);
 
   // schedule phone pushes (ntfy) for upcoming timed events & reminders — fires even when app is closed
   useEffect(() => {
@@ -1754,8 +1764,17 @@ function App() {
     if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, l.openAt ? ("🔒 מכתב חתום מ" + N[l.from] + " — ייפתח ב-" + new Date(l.openAt).toLocaleDateString("he-IL")) : ("💌 מכתב חדש מ" + N[l.from]));
   };
   const reactLetter = (id, e) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, reaction: l.reaction === e ? null : e } : l) }));
-  const keepsakeLetter = (id) => setData((d) => ({ ...d, letters: d.letters.map((l) => l.id === id ? { ...l, keepsake: true, photo: null, hasPhoto: false } : l) }));
-  const delLetter = (id) => { setData((d) => ({ ...d, letters: d.letters.filter((l) => l.id !== id) })); setOpenLetter(null); };
+  const keepsakeLetter = (id) => {
+    const l = (data.letters || []).find((x) => x.id === id);
+    if (l && l.hasPhoto) deletePhotoDoc(coupleId, id);
+    setData((d) => ({ ...d, letters: d.letters.map((x) => x.id === id ? { ...x, keepsake: true, photo: null, hasPhoto: false } : x) }));
+  };
+  const delLetter = (id) => {
+    const l = (data.letters || []).find((x) => x.id === id);
+    if (l && l.hasPhoto) deletePhotoDoc(coupleId, id);
+    setData((d) => ({ ...d, letters: d.letters.filter((x) => x.id !== id) }));
+    setOpenLetter(null);
+  };
   const addEvent = (e) => { setData((d) => ({ ...d, events: [...d.events, e] })); setModal(null); };
   const delEvent = (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) }));
   const saveCountdown = (c) => { setData((d) => { const has = d.countdowns.some((x) => x.id === c.id); return { ...d, countdowns: has ? d.countdowns.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...d.countdowns, { ...c, id: c.id || uid() }] }; }); setModal(null); setCdTarget(null); };
@@ -2051,7 +2070,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v21</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v23</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
