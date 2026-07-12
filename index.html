@@ -31,7 +31,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAan_Ogz5E2K-6nJtlLvpFiLXiUYSDXxyM",
@@ -48,7 +48,7 @@
   const db = getFirestore(app);
   try { await setPersistence(auth, browserLocalPersistence); } catch (e) {}
 
-  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, deleteDoc, onSnapshot };
+  window.__fb = { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, doc, getDoc, setDoc, deleteDoc, onSnapshot, runTransaction };
   window.dispatchEvent(new Event("fb-ready"));
 </script>
 
@@ -369,16 +369,39 @@ function translateAuthError(e) {
 
 const CHAT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CHAT_MAX_MESSAGES = 200;
+// The marker is kept inside `text` so a partner who still has v26 open cannot
+// erase the photo reference: v26 preserves text even though it strips new fields.
+// v27 hides the marker and renders the real "פתח תמונה" control instead.
+const CHAT_PHOTO_MARKER = "\u2063📷 תמונה בצ׳אט";
+const chatPhotoDocId = (messageId) => "chat-" + messageId;
+function visibleChatText(message) {
+  const text = String((message && message.text) || "");
+  if (message && message.hasPhoto && (text === CHAT_PHOTO_MARKER || text.startsWith(CHAT_PHOTO_MARKER + "\n"))) {
+    return text.slice(CHAT_PHOTO_MARKER.length).replace(/^\n/, "");
+  }
+  return text;
+}
+function normalizeChatMessages(messages) {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((m) => m && (typeof m.text === "string" || m.hasPhoto === true))
+    .map((m) => {
+      const text = String(m.text || "").slice(0, 600);
+      const markedPhoto = text === CHAT_PHOTO_MARKER || text.startsWith(CHAT_PHOTO_MARKER + "\n");
+      return {
+        id: m.id || uid(),
+        from: m.from === "b" ? "b" : "a",
+        text,
+        hasPhoto: m.hasPhoto === true || markedPhoto,
+        createdAt: Number(m.createdAt) || Date.now(),
+      };
+    })
+    .filter((m) => m.text.trim() || m.hasPhoto)
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
 function cleanChatMessages(messages, nowMs = Date.now()) {
   const cutoff = nowMs - CHAT_TTL_MS;
-  return (Array.isArray(messages) ? messages : [])
-    .filter((m) => m && typeof m.text === "string" && (Number(m.createdAt) || 0) >= cutoff)
-    .map((m) => ({
-      id: m.id || uid(),
-      from: m.from === "b" ? "b" : "a",
-      text: String(m.text || "").slice(0, 600),
-      createdAt: Number(m.createdAt) || Date.now(),
-    }))
+  return normalizeChatMessages(messages)
+    .filter((m) => m.createdAt >= cutoff)
     .sort((a, b) => a.createdAt - b.createdAt)
     .slice(-CHAT_MAX_MESSAGES);
 }
@@ -387,9 +410,31 @@ function sameChatMessages(a, b) {
   const y = Array.isArray(b) ? b : [];
   if (x.length !== y.length) return false;
   for (let i = 0; i < x.length; i++) {
-    if (x[i].id !== y[i].id || x[i].text !== y[i].text || x[i].from !== y[i].from || x[i].createdAt !== y[i].createdAt) return false;
+    if (x[i].id !== y[i].id || x[i].text !== y[i].text || x[i].from !== y[i].from || !!x[i].hasPhoto !== !!y[i].hasPhoto || x[i].createdAt !== y[i].createdAt) return false;
   }
   return true;
+}
+function planChatCleanup(messages, photoRefs, nowMs = Date.now()) {
+  const refs = (photoRefs && typeof photoRefs === "object" && !Array.isArray(photoRefs)) ? photoRefs : {};
+  const current = normalizeChatMessages(messages || []).map((m) => refs[m.id] ? { ...m, hasPhoto: true } : m);
+  const cleaned = cleanChatMessages(current, nowMs);
+  const keptIds = new Set(cleaned.map((m) => m.id));
+  const droppedIds = new Set(current.filter((m) => !keptIds.has(m.id)).map((m) => m.id));
+  const cutoff = nowMs - CHAT_TTL_MS;
+  const expiredRefIds = Object.entries(refs).filter(([, createdAt]) => (Number(createdAt) || 0) < cutoff).map(([id]) => id);
+  expiredRefIds.forEach((id) => droppedIds.add(id));
+  const photoIds = [...new Set([
+    ...current.filter((m) => droppedIds.has(m.id) && m.hasPhoto).map((m) => m.id),
+    ...expiredRefIds,
+  ])];
+  const nextRefs = { ...refs };
+  photoIds.forEach((id) => { delete nextRefs[id]; });
+  return {
+    changed: droppedIds.size > 0 || photoIds.length > 0,
+    photoIds,
+    nextMessages: current.filter((m) => !droppedIds.has(m.id)),
+    nextRefs,
+  };
 }
 // Drops expired timed letters so the letter list stays lean. Keepsakes (incl. sealed
 // letters) are never auto-removed — only a manual delete removes them. Photos live in a
@@ -406,10 +451,10 @@ function cleanLetters(letters, nowMs = Date.now()) {
 /* ---- letter photos live in couples/{cid}/photos/{letterId}, OUT of the main doc ----
    Keeps the couple doc small & fast (every save re-uploads the whole doc), and removes
    the 1MB ceiling. Each helper returns a promise; callers handle their own loading UI. */
-async function savePhotoDoc(coupleId, letterId, dataUrl) {
+async function savePhotoDoc(coupleId, letterId, dataUrl, meta = {}) {
   const fb = window.__fb;
   if (!fb || !coupleId || !letterId || !dataUrl) return false;
-  await fb.setDoc(fb.doc(fb.db, "couples", coupleId, "photos", letterId), { photo: dataUrl, updatedAt: Date.now() });
+  await fb.setDoc(fb.doc(fb.db, "couples", coupleId, "photos", letterId), { ...meta, photo: dataUrl, updatedAt: Date.now() });
   return true;
 }
 async function loadPhotoDoc(coupleId, letterId) {
@@ -419,6 +464,18 @@ async function loadPhotoDoc(coupleId, letterId) {
     const snap = await fb.getDoc(fb.doc(fb.db, "couples", coupleId, "photos", letterId));
     return snap && snap.exists() ? (snap.data().photo || null) : null;
   } catch (e) { return null; }
+}
+// Chat needs to distinguish a genuinely deleted photo from a temporary network or
+// permission error so it never tells the user a photo disappeared when it did not.
+async function loadPhotoDocStatus(coupleId, photoId) {
+  const fb = window.__fb;
+  if (!fb || !coupleId || !photoId) return { status: "error", photo: null };
+  try {
+    const snap = await fb.getDoc(fb.doc(fb.db, "couples", coupleId, "photos", photoId));
+    if (!snap || !snap.exists()) return { status: "missing", photo: null };
+    const photo = snap.data().photo || null;
+    return photo ? { status: "ok", photo } : { status: "missing", photo: null };
+  } catch (e) { return { status: "error", photo: null }; }
 }
 async function deletePhotoDoc(coupleId, letterId) {
   const fb = window.__fb;
@@ -450,6 +507,7 @@ function buildSeed() {
     ntfyTopic: "",
     dailyAnswers: {},
     chatMessages: [],
+    chatPhotoRefs: {},
     roulette: ["מי בוחר סרט 🎬", "מי מכין ארוחה 🍳", "נשיקה 💋", "חיבוק גדול 🤗", "מי שוטף כלים 🧽", "10 דק׳ עיסוי 💆"],
     countdowns: [],
     letters: [],
@@ -480,10 +538,23 @@ function normalize(d) {
   out.ntfyTopic = d.ntfyTopic || "";
   out.roulette = Array.isArray(d.roulette) ? d.roulette : s.roulette;
   out.dailyAnswers = (d.dailyAnswers && typeof d.dailyAnswers === "object") ? d.dailyAnswers : {};
-  out.chatMessages = cleanChatMessages(d.chatMessages || []);
+  out.chatPhotoRefs = (d.chatPhotoRefs && typeof d.chatPhotoRefs === "object" && !Array.isArray(d.chatPhotoRefs)) ? d.chatPhotoRefs : {};
+  // Keep all valid message metadata until the cleanup effect can also delete any
+  // matching photo docs. Pruning here would lose those IDs and leave orphan photos.
+  out.chatMessages = normalizeChatMessages(d.chatMessages || []).map((m) => out.chatPhotoRefs[m.id] ? { ...m, hasPhoto: true } : m);
   if (!d.countdowns) out.countdowns = d.countdown ? [{ id: uid(), ...d.countdown }] : s.countdowns;
   else out.countdowns = d.countdowns;
   return out;
+}
+
+// Chat fields have their own transaction-safe persistence. Omitting them from the
+// broad journal save prevents a stale device snapshot from overwriting a message or
+// its photo reference while saving an unrelated mood, answer, event, etc.
+function journalNonChatPayload(d) {
+  const obj = JSON.parse(JSON.stringify(d || {}));
+  delete obj.a; delete obj.b;
+  delete obj.chatMessages; delete obj.chatPhotoRefs;
+  return obj;
 }
 
 /* ============================ atoms ============================ */
@@ -505,8 +576,8 @@ function RoundBtn({ children, onClick, disabled, className = "", style = {} }) {
 }
 function Modal({ children, onClose, accent = "#EC4899" }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-3"
-      style={{ background: "rgba(40,20,30,.40)", backdropFilter: "blur(5px)", fontFamily: BODY }} onClick={onClose} dir="rtl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-3 !mt-0"
+      style={{ background: "rgba(40,20,30,.40)", backdropFilter: "blur(5px)", fontFamily: BODY, marginTop: 0 }} onClick={onClose} dir="rtl">
       <div className="w-full overflow-y-auto rounded-3xl bg-white"
         style={{ maxWidth: 430, maxHeight: "90vh", boxShadow: "0 26px 64px -20px rgba(150,40,80,.55)", border: `2px solid ${accent}22` }}
         onClick={(e) => e.stopPropagation()}>
@@ -1279,8 +1350,58 @@ function OnThisDayCard({ items, names }) {
   );
 }
 
-function RollingChatCard({ messages, names, me, meColor, partnerColor, msgTxt, setMsgTxt, onSend, msgSent, onDelete, ntfyOn }) {
+function ChatPhotoViewer({ message, names, coupleId, onClose }) {
+  const [photoData, setPhotoData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [missing, setMissing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const accent = message.from === "b" ? "#EC4899" : "#3B82F6";
+  useEffect(() => {
+    let alive = true;
+    setLoading(true); setMissing(false); setLoadError(false); setPhotoData(null);
+    loadPhotoDocStatus(coupleId, chatPhotoDocId(message.id)).then((result) => {
+      if (!alive) return;
+      setPhotoData(result.photo);
+      setMissing(result.status === "missing");
+      setLoadError(result.status === "error");
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [coupleId, message.id, retryTick]);
+  return (
+    <Modal onClose={onClose} accent={accent}>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <ImageIcon style={{ width: 21, height: 21, color: accent }} />
+            <span className="font-extrabold" style={{ fontSize: 16, color: C.ink }}>תמונה מ{names[message.from]}</span>
+          </div>
+          <RoundBtn onClick={onClose} className="w-9 h-9" style={closeBtnStyle}><X style={{ width: 16, height: 16, color: C.muted }} /></RoundBtn>
+        </div>
+        {loading && <div className="w-full rounded-2xl grid place-items-center" style={{ height: 220, background: "#F6EEF2", color: C.muted, fontSize: 13 }}>טוען תמונה…</div>}
+        {missing && <div className="w-full rounded-2xl grid place-items-center text-center px-5" style={{ height: 180, background: "#F6EEF2", color: C.muted, fontSize: 13, lineHeight: 1.6 }}>התמונה כבר אינה זמינה.<br />ייתכן שעברו 7 ימים והיא נמחקה.</div>}
+        {loadError && (
+          <div className="w-full rounded-2xl grid place-items-center text-center px-5 py-6" style={{ minHeight: 180, background: "#FFF7E6", color: "#9A6500", fontSize: 13, lineHeight: 1.6 }}>
+            <div>לא הצלחנו לטעון את התמונה.<br />בדקו את החיבור ונסו שוב.</div>
+            <button onClick={() => setRetryTick((x) => x + 1)} className="rounded-2xl px-5 py-2 mt-3 font-extrabold" style={{ background: "#fff", color: "#7C3AED", border: "1px solid #E4C9FF" }}>נסה שוב</button>
+          </div>
+        )}
+        {photoData && <img src={photoData} alt="תמונה בצ׳אט" className="w-full rounded-2xl" style={{ maxHeight: "70vh", objectFit: "contain", background: "#F6EEF2" }} />}
+      </div>
+    </Modal>
+  );
+}
+
+function RollingChatCard({ messages, names, me, meColor, partnerColor, coupleId, msgTxt, setMsgTxt, onSend, msgSent, onDelete, ntfyOn }) {
   const boxRef = useRef(null);
+  const fileRef = useRef(null);
+  const [openPhoto, setOpenPhoto] = useState(null);
+  const [draftPhoto, setDraftPhoto] = useState(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+  const [photoErr, setPhotoErr] = useState("");
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
   }, [messages && messages.length]);
@@ -1293,7 +1414,35 @@ function RollingChatCard({ messages, names, me, meColor, partnerColor, msgTxt, s
     if (day === today) return time;
     return d.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }) + " · " + time;
   };
+  async function pickPhoto(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.type && !file.type.startsWith("image/")) { setPhotoErr("אפשר לבחור קובץ תמונה בלבד"); return; }
+    setPhotoBusy(true); setPhotoErr("");
+    try {
+      const prepared = await fileToDataURL(file, { maxDim: 900, budgetBytes: 70 * 1024 });
+      if (!prepared || approxBytes(prepared) > 140 * 1024) throw new Error("compressed image is too large");
+      setDraftPhoto(prepared);
+    } catch (err) {
+      setDraftPhoto(null);
+      setPhotoErr("לא הצלחנו להכין את התמונה — נסו תמונה אחרת");
+    } finally { setPhotoBusy(false); }
+  }
+  async function submitMessage() {
+    if (sendingRef.current || photoBusy || (!msgTxt.trim() && !draftPhoto)) return;
+    sendingRef.current = true;
+    setSending(true); setPhotoErr("");
+    try {
+      const ok = await onSend(draftPhoto);
+      if (ok) setDraftPhoto(null);
+      else setPhotoErr(draftPhoto ? "שליחת התמונה נכשלה — שום תמונה לא נשמרה. נסו שוב" : "שליחת ההודעה נכשלה — נסו שוב");
+    } catch (e) {
+      setPhotoErr(draftPhoto ? "שליחת התמונה נכשלה — שום תמונה לא נשמרה. נסו שוב" : "שליחת ההודעה נכשלה — נסו שוב");
+    } finally { sendingRef.current = false; setSending(false); }
+  }
   return (
+    <>
     <Card className="fade-up p-3" style={{ animationDelay: ".08s" }}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5"><span style={{ fontSize: 16 }}>💬</span><span className="font-extrabold" style={{ fontSize: 14, color: C.ink }}>הצ׳אט שלנו</span></div>
@@ -1307,14 +1456,21 @@ function RollingChatCard({ messages, names, me, meColor, partnerColor, msgTxt, s
           {items.map((m) => {
             const mine = m.from === me;
             const color = m.from === "b" ? "#EC4899" : "#3B82F6";
+            const displayText = visibleChatText(m);
             return (
               <div key={m.id} className="flex flex-col" style={{ alignSelf: mine ? "flex-end" : "flex-start", maxWidth: "84%" }}>
                 <div className="rounded-3xl px-3 py-2" style={mine ? { background: `linear-gradient(135deg, ${meColor}, #A855F7)`, color: "#fff", borderBottomRightRadius: 8, boxShadow: "0 10px 18px -14px rgba(80,40,120,.55)" } : { background: "#fff", color: C.ink, border: `1px solid ${C.line}`, borderBottomLeftRadius: 8 }}>
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <span className="font-extrabold" style={{ fontSize: 10.5, color: mine ? "rgba(255,255,255,.88)" : color }}>{names[m.from] || (m.from === "a" ? "אסף" : "ליאל")}</span>
-                    <button onClick={() => { if (window.confirm("למחוק את ההודעה מהצ׳אט של שניכם?")) onDelete(m.id); }} className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: mine ? "rgba(255,255,255,.18)" : "#F6EEF2" }} aria-label="מחיקת הודעה"><X style={{ width: 10, height: 10, color: mine ? "#fff" : "#D94A7C" }} /></button>
+                    <button onClick={() => { if (window.confirm(m.hasPhoto ? "למחוק את ההודעה ואת התמונה מהצ׳אט של שניכם?" : "למחוק את ההודעה מהצ׳אט של שניכם?")) onDelete(m.id); }} className="rounded-full grid place-items-center" style={{ width: 18, height: 18, background: mine ? "rgba(255,255,255,.18)" : "#F6EEF2" }} aria-label="מחיקת הודעה"><X style={{ width: 10, height: 10, color: mine ? "#fff" : "#D94A7C" }} /></button>
                   </div>
-                  <div style={{ fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.text}</div>
+                  {displayText && <div style={{ fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap", wordBreak: "break-word", marginBottom: m.hasPhoto ? 7 : 0 }}>{displayText}</div>}
+                  {m.hasPhoto && (
+                    <button onClick={() => setOpenPhoto(m)} className="w-full flex items-center justify-center gap-1.5 rounded-2xl px-3 py-2 font-extrabold transition active:scale-95"
+                      style={mine ? { fontSize: 13, background: "rgba(255,255,255,.20)", color: "#fff", border: "1px solid rgba(255,255,255,.25)" } : { fontSize: 13, background: `${color}12`, color, border: `1px solid ${color}2b` }}>
+                      <ImageIcon style={{ width: 16, height: 16 }} /> פתח תמונה
+                    </button>
+                  )}
                 </div>
                 <div style={{ alignSelf: mine ? "flex-end" : "flex-start", fontSize: 10.5, color: C.muted, marginTop: 3, paddingInline: 6 }}>{fmtMsgTime(m.createdAt)}</div>
               </div>
@@ -1323,11 +1479,23 @@ function RollingChatCard({ messages, names, me, meColor, partnerColor, msgTxt, s
         </div>
       </div>
       <div className="flex items-center gap-1.5 mb-2"><span style={{ fontSize: 15 }}>✍️</span><span className="font-extrabold" style={{ fontSize: 13, color: C.muted }}>{ntfyOn ? "שלח/י הודעה — תישמר וגם תישלח כהתראה" : "שלח/י הודעה — תישמר בצ׳אט"}</span></div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
+      {(draftPhoto || photoBusy) && (
+        <div className="flex items-center gap-2 rounded-2xl px-3 py-2 mb-2" style={{ background: "#F3E8FF", border: "1px solid #E4C9FF" }}>
+          <ImageIcon style={{ width: 17, height: 17, color: "#7C3AED" }} />
+          <span className="flex-1 font-bold" style={{ fontSize: 12.5, color: "#7C3AED" }}>{photoBusy ? "מכווץ ומכין את התמונה…" : "התמונה מוכנה לשליחה — היא לא תוצג בצ׳אט"}</span>
+          {draftPhoto && <button onClick={() => { setDraftPhoto(null); setPhotoErr(""); }} className="rounded-full grid place-items-center" style={{ width: 24, height: 24, background: "#fff" }} aria-label="הסרת תמונה"><X style={{ width: 13, height: 13, color: "#7C3AED" }} /></button>}
+        </div>
+      )}
+      {photoErr && <div className="rounded-2xl px-3 py-2 mb-2 text-center font-bold" style={{ fontSize: 12, background: "#FDECEC", color: "#DC2626" }}>{photoErr}</div>}
       <div className="flex gap-2">
-        <input value={msgTxt} onChange={(e) => setMsgTxt(e.target.value)} placeholder="כתבו משהו ושלחו…" className={inputCls} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") onSend(); }} />
-        <button onClick={onSend} disabled={!msgTxt.trim()} className="shrink-0 rounded-2xl px-5 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>{msgSent ? "✓" : "שלח"}</button>
+        <input value={msgTxt} disabled={sending} onChange={(e) => setMsgTxt(e.target.value)} placeholder="כתבו משהו ושלחו…" className={inputCls + " min-w-0 flex-1"} style={{ ...inputStyle, fontSize: 14 }} onKeyDown={(e) => { if (e.key === "Enter") submitMessage(); }} />
+        <button onClick={() => fileRef.current && fileRef.current.click()} disabled={photoBusy || sending} className="shrink-0 rounded-2xl grid place-items-center transition active:scale-95 disabled:opacity-40" style={{ width: 46, background: draftPhoto ? "#EDE0FF" : "#F6EEF2", border: draftPhoto ? "1px solid #D6B6FF" : `1px solid ${C.line}` }} aria-label="הוספת תמונה"><ImagePlus style={{ width: 20, height: 20, color: "#7C3AED" }} /></button>
+        <button onClick={submitMessage} disabled={sending || photoBusy || (!msgTxt.trim() && !draftPhoto)} className="shrink-0 rounded-2xl px-4 font-extrabold text-white transition active:scale-95 disabled:opacity-40" style={{ fontSize: 14, background: "linear-gradient(135deg,#A855F7,#EC4899)" }}>{sending ? "…" : msgSent ? "✓" : "שלח"}</button>
       </div>
     </Card>
+    {openPhoto && <ChatPhotoViewer message={openPhoto} names={names} coupleId={coupleId} onClose={() => setOpenPhoto(null)} />}
+    </>
   );
 }
 
@@ -1423,13 +1591,16 @@ function App() {
   const [linkReady, setLinkReady] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkErr, setLinkErr] = useState("");
-  const lastSavedRef = useRef("");
+  const lastSavedNonChatRef = useRef("");
   const saveTimerRef = useRef(null);
+  const dataRef = useRef(null);
   const [saveRetryTick, setSaveRetryTick] = useState(0);
   const [syncStatus, setSyncStatus] = useState("synced");
   const [syncText, setSyncText] = useState("מסונכרן");
   const seenLettersRef = useRef(null);
   const localLettersRef = useRef(new Set());
+  const chatCleanupBusyRef = useRef(false);
+  dataRef.current = data;
 
 
   const [now, setNow] = useState(Date.now());
@@ -1491,10 +1662,21 @@ function App() {
         const norm = normalize(raw);
         norm.a = raw.a || null;
         norm.b = raw.b || null;
-        lastSavedRef.current = JSON.stringify(norm);
-        setSyncStatus("synced");
-        setSyncText("מסונכרן");
-        setData(norm);
+        const remoteNonChat = JSON.stringify(journalNonChatPayload(norm));
+        const local = dataRef.current;
+        const localDirty = !!local && JSON.stringify(journalNonChatPayload(local)) !== lastSavedNonChatRef.current;
+        lastSavedNonChatRef.current = remoteNonChat;
+        if (localDirty) {
+          // A chat transaction may emit a snapshot while an unrelated local edit
+          // still waits for its 400ms save. Keep that local edit, but always accept
+          // the transaction-owned chat fields and membership from the server.
+          const merged = { ...local, chatMessages: norm.chatMessages, chatPhotoRefs: norm.chatPhotoRefs, activityDates: [...new Set([...(local.activityDates || []), ...(norm.activityDates || [])])], a: norm.a, b: norm.b };
+          dataRef.current = merged;
+          setSyncStatus("saving"); setSyncText("שומר…"); setData(merged);
+        } else {
+          dataRef.current = norm;
+          setSyncStatus("synced"); setSyncText("מסונכרן"); setData(norm);
+        }
       }
     }, (err) => { console.error("couple snapshot error", err); setSyncStatus("error"); setSyncText("שגיאת סנכרון"); });
     return () => unsub();
@@ -1503,18 +1685,19 @@ function App() {
   // save journal (debounced; never overwrites membership a/b)
   useEffect(() => {
     if (!fb || !user || !data || !coupleId) return;
-    const j = JSON.stringify(data);
-    if (j === lastSavedRef.current) { setSyncStatus("synced"); setSyncText("מסונכרן"); return; }
+    const obj = journalNonChatPayload(data);
+    const j = JSON.stringify(obj);
+    if (j === lastSavedNonChatRef.current) { setSyncStatus("synced"); setSyncText("מסונכרן"); return; }
     setSyncStatus("saving");
     setSyncText("שומר…");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const obj = JSON.parse(j); delete obj.a; delete obj.b;
+      saveTimerRef.current = null;
       fb.setDoc(fb.doc(fb.db, "couples", coupleId), obj, { merge: true })
-        .then(() => { lastSavedRef.current = j; setSyncStatus("synced"); setSyncText("נשמר"); })
+        .then(() => { lastSavedNonChatRef.current = j; setSyncStatus("synced"); setSyncText("נשמר"); })
         .catch((e) => { console.error("save failed", e); setSyncStatus("error"); setSyncText("שגיאת שמירה — לחצו לנסות שוב"); });
     }, 400);
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+    return () => { if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; } };
   }, [data, fb, user, coupleId, saveRetryTick]);
 
   // local safety backup only — does not write or restore anything by itself
@@ -1535,14 +1718,29 @@ function App() {
     setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
   }, [now]);
 
-  // keep rolling chat history to the last 7 days only
+  // Keep rolling chat history to the last 7 days / 200 messages. Photo docs are
+  // deleted in the same transaction that removes their message/reference. If the
+  // transaction fails offline, nothing is partially removed and the next minute retries.
   useEffect(() => {
-    if (!data) return;
-    const cleaned = cleanChatMessages(data.chatMessages || []);
-    if (!sameChatMessages(cleaned, data.chatMessages || [])) {
-      setData((d) => ({ ...d, chatMessages: cleanChatMessages(d.chatMessages || []) }));
-    }
-  }, [data && data.chatMessages, todayISO]);
+    if (!data || !coupleId || !fb || !fb.runTransaction || chatCleanupBusyRef.current) return;
+    const cleanupNow = Date.now();
+    const localPlan = planChatCleanup(data.chatMessages || [], data.chatPhotoRefs || {}, cleanupNow);
+    if (!localPlan.changed) return;
+    // Never let an automatic chat cleanup snapshot interrupt a pending unrelated edit.
+    if (JSON.stringify(journalNonChatPayload(data)) !== lastSavedNonChatRef.current) return;
+    chatCleanupBusyRef.current = true;
+    fb.runTransaction(fb.db, async (transaction) => {
+      const coupleRef = fb.doc(fb.db, "couples", coupleId);
+      const snap = await transaction.get(coupleRef);
+      if (!snap.exists()) return;
+      const remote = snap.data() || {};
+      const plan = planChatCleanup(remote.chatMessages || [], remote.chatPhotoRefs || {}, cleanupNow);
+      if (!plan.changed) return;
+      plan.photoIds.forEach((id) => transaction.delete(fb.doc(fb.db, "couples", coupleId, "photos", chatPhotoDocId(id))));
+      transaction.set(coupleRef, { chatMessages: plan.nextMessages, chatPhotoRefs: plan.nextRefs }, { merge: true });
+    }).catch((e) => { console.warn("chat cleanup will retry later", e); })
+      .finally(() => { chatCleanupBusyRef.current = false; });
+  }, [data && data.chatMessages, data && data.chatPhotoRefs, todayISO, coupleId, fb, Math.floor(now / 60000)]);
 
   // auto-remove expired timed letters, and delete their photo docs too (no orphans)
   useEffect(() => {
@@ -1753,15 +1951,76 @@ function App() {
   const myAns = todayAns[me] || null;
   const partnerAns = todayAns[partner] || null;
   const sendThinking = () => { if (!data.ntfyOn || !data.ntfyTopic) return; sendNtfy(data.ntfyTopic, "💭 " + N[me] + " חושב/ת עלייך עכשיו 🥰"); setThinkSent(true); setTimeout(() => setThinkSent(false), 2500); };
-  const sendMsg = () => {
+  const sendMsg = async (photoData = null) => {
     const txt = msgTxt.trim();
-    if (!txt) return;
-    const message = { id: uid(), from: me, text: txt.slice(0, 600), createdAt: Date.now() };
-    setData((d) => ({ ...d, chatMessages: cleanChatMessages([...(d.chatMessages || []), message]), activityDates: act(d) }));
-    if (data.ntfyOn && data.ntfyTopic) sendNtfy(data.ntfyTopic, "💬 " + N[me] + ": " + txt);
-    setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500);
+    if (!txt && !photoData) return false;
+    const id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : uid();
+    const createdAt = Date.now();
+    const storedText = photoData ? (CHAT_PHOTO_MARKER + (txt ? "\n" + txt : "")).slice(0, 600) : txt.slice(0, 600);
+    const message = { id, from: me, text: storedText, hasPhoto: !!photoData, createdAt };
+    try {
+      if (!fb || !fb.runTransaction) return false;
+      setSyncStatus("saving"); setSyncText(photoData ? "שומר תמונה…" : "שומר הודעה…");
+      // All chat writes are transaction-owned and excluded from the broad journal
+      // saver. This preserves simultaneous messages and keeps a photo + its pointer
+      // atomic without risking an unrelated stale full-document write afterward.
+      await fb.runTransaction(fb.db, async (transaction) => {
+        const coupleRef = fb.doc(fb.db, "couples", coupleId);
+        const snap = await transaction.get(coupleRef);
+        if (!snap.exists()) throw new Error("couple document is missing");
+        const remote = snap.data() || {};
+        const remoteRefs = (remote.chatPhotoRefs && typeof remote.chatPhotoRefs === "object") ? remote.chatPhotoRefs : {};
+        const remoteMessages = normalizeChatMessages(remote.chatMessages || []).map((m) => remoteRefs[m.id] ? { ...m, hasPhoto: true } : m);
+        const nextMessages = remoteMessages.some((m) => m.id === id) ? remoteMessages : [...remoteMessages, message];
+        const remoteDates = Array.isArray(remote.activityDates) ? remote.activityDates : [];
+        const nextDates = remoteDates.includes(todayISO) ? remoteDates : [...remoteDates, todayISO];
+        const nextPhotoRefs = photoData ? { ...remoteRefs, [id]: createdAt } : remoteRefs;
+        if (photoData) {
+          const photoRef = fb.doc(fb.db, "couples", coupleId, "photos", chatPhotoDocId(id));
+          transaction.set(photoRef, { photo: photoData, updatedAt: createdAt, expiresAt: new Date(createdAt + CHAT_TTL_MS) });
+        }
+        transaction.set(coupleRef, { chatMessages: nextMessages, chatPhotoRefs: nextPhotoRefs, activityDates: nextDates }, { merge: true });
+      });
+      if (data.ntfyOn && data.ntfyTopic) {
+        const notice = photoData ? (txt ? ("💬 " + N[me] + ": " + txt + " 📷") : ("📷 תמונה חדשה מ" + N[me] + " בצ׳אט")) : ("💬 " + N[me] + ": " + txt);
+        sendNtfy(data.ntfyTopic, notice);
+      }
+      setMsgTxt(""); setMsgSent(true); setTimeout(() => setMsgSent(false), 2500);
+      return true;
+    } catch (e) {
+      console.error("chat photo send failed", e);
+      setSyncStatus("error"); setSyncText("שגיאת שמירה — נסו שוב");
+      return false;
+    }
   };
-  const delChatMessage = (id) => setData((d) => ({ ...d, chatMessages: (d.chatMessages || []).filter((m) => m.id !== id) }));
+  const delChatMessage = async (id) => {
+    if (!fb || !fb.runTransaction) return false;
+    try {
+      setSyncStatus("saving"); setSyncText("מוחק הודעה…");
+      await fb.runTransaction(fb.db, async (transaction) => {
+        const coupleRef = fb.doc(fb.db, "couples", coupleId);
+        const snap = await transaction.get(coupleRef);
+        if (!snap.exists()) throw new Error("couple document is missing");
+        const remote = snap.data() || {};
+        const nextRefs = { ...((remote.chatPhotoRefs && typeof remote.chatPhotoRefs === "object") ? remote.chatPhotoRefs : {}) };
+        const remoteMessages = normalizeChatMessages(remote.chatMessages || []).map((m) => nextRefs[m.id] ? { ...m, hasPhoto: true } : m);
+        const target = remoteMessages.find((m) => m.id === id);
+        const hasPhoto = !!nextRefs[id] || !!(target && target.hasPhoto);
+        delete nextRefs[id];
+        if (hasPhoto) {
+          const photoRef = fb.doc(fb.db, "couples", coupleId, "photos", chatPhotoDocId(id));
+          transaction.delete(photoRef);
+        }
+        transaction.set(coupleRef, { chatMessages: remoteMessages.filter((m) => m.id !== id), chatPhotoRefs: nextRefs }, { merge: true });
+      });
+      return true;
+    } catch (e) {
+      console.error("chat message delete failed", e);
+      setSyncStatus("error"); setSyncText("שגיאת מחיקה — נסו שוב");
+      alert("לא הצלחנו למחוק את ההודעה כרגע. בדקו את החיבור ונסו שוב.");
+      return false;
+    }
+  };
   const exportBackup = () => {
     try {
       const obj = JSON.parse(JSON.stringify(data)); delete obj.a; delete obj.b;
@@ -1892,7 +2151,7 @@ function App() {
           </button>
         )}
 
-        <RollingChatCard messages={chatMessages} names={N} me={me} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} msgTxt={msgTxt} setMsgTxt={setMsgTxt} onSend={sendMsg} msgSent={msgSent} onDelete={delChatMessage} ntfyOn={!!(data.ntfyOn && data.ntfyTopic)} />
+        <RollingChatCard messages={chatMessages} names={N} me={me} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} coupleId={coupleId} msgTxt={msgTxt} setMsgTxt={setMsgTxt} onSend={sendMsg} msgSent={msgSent} onDelete={delChatMessage} ntfyOn={!!(data.ntfyOn && data.ntfyTopic)} />
 
         {F.dailyQ && <DailyQuestionCard question={todayQuestion} myAns={myAns} partnerAns={partnerAns} meName={N[me]} partnerName={N[partner]} meColor={meColor} partnerColor={partner === "b" ? "#EC4899" : "#3B82F6"} onSave={saveDailyAnswer} />}
 
@@ -2108,7 +2367,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v26</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v27</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
