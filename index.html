@@ -523,6 +523,9 @@ function buildMemoryCandidates(data, names, nowMs = Date.now()) {
       title: names && names[letter.from] ? "מכתב מ" + names[letter.from] : "מכתב מהיומן שלנו",
       body: letter.text.trim(),
       dateLabel: memoryDateLabel(createdAt),
+      letterId: letter.id || null,
+      hasPhoto: !!letter.hasPhoto || !!letter.photo,
+      photo: typeof letter.photo === "string" ? letter.photo : null,
     });
   });
   return items;
@@ -1393,13 +1396,28 @@ function OnThisDayCard({ items, names }) {
   );
 }
 
-function MemorySurprise({ memory, onClose }) {
+function MemorySurprise({ memory, coupleId, onClose }) {
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
+  const aliveRef = useRef(true);
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  useEffect(() => () => { aliveRef.current = false; }, []);
   if (!memory) return null;
+  async function openLetterPhoto() {
+    if (photoLoading) return;
+    setPhotoLoading(true); setPhotoError(false);
+    let photo = memory.photo || null;
+    if (!photo && memory.hasPhoto && coupleId && memory.letterId) photo = await loadPhotoDoc(coupleId, memory.letterId);
+    if (!aliveRef.current) return;
+    setPhotoLoading(false);
+    if (photo) setPhotoPreview(photo);
+    else setPhotoError(true);
+  }
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4 !mt-0" dir="rtl" role="dialog" aria-modal="true" aria-label="מכתב מהמזכרות שלנו"
       style={{ zIndex: 70, marginTop: 0, background: "rgba(45,25,38,.36)", backdropFilter: "blur(5px)", fontFamily: BODY }}>
@@ -1422,10 +1440,20 @@ function MemorySurprise({ memory, onClose }) {
             {memory.body && <div style={{ fontSize: 15, color: C.ink, lineHeight: 1.65, whiteSpace: "pre-wrap", textAlign: "right" }}>{memory.body}</div>}
           </div>
 
+          {memory.hasPhoto && <button onClick={openLetterPhoto} disabled={photoLoading} className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 mt-3 font-extrabold transition active:scale-95 disabled:opacity-50" style={{ fontSize: 14, color: "#A23B78", background: "#FCEAF3", border: "1px solid #F6CEE2" }}>
+            <ImageIcon style={{ width: 18, height: 18 }} />{photoLoading ? "טוען תמונה…" : "פתח תמונה"}
+          </button>}
+          {photoError && <div style={{ fontSize: 12, color: "#C24170", marginTop: 8 }}>לא הצלחנו לטעון את התמונה. אפשר לנסות שוב.</div>}
+
           {memory.dateLabel && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 12 }}>{memory.dateLabel}</div>}
           <div style={{ fontFamily: SCRIPT, fontSize: 16, color: "#C56A92", marginTop: 6 }}>איזה כיף ששמרנו את המילים האלה ❤️</div>
         </div>
       </div>
+
+      {photoPreview && <div className="fixed inset-0 flex items-center justify-center p-4 !mt-0" dir="rtl" style={{ zIndex: 80, marginTop: 0, background: "rgba(20,10,18,.88)", backdropFilter: "blur(6px)" }} onClick={() => setPhotoPreview(null)}>
+        <button onClick={() => setPhotoPreview(null)} aria-label="סגירת התמונה" className="absolute grid place-items-center rounded-full" style={{ top: 18, left: 18, width: 42, height: 42, color: "#fff", background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.28)" }}><X style={{ width: 20, height: 20 }} /></button>
+        <img src={photoPreview} alt="תמונה מהמכתב" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "82vh", borderRadius: 22, boxShadow: "0 24px 60px -18px rgba(0,0,0,.75)" }} />
+      </div>}
     </div>
   );
 }
@@ -1927,9 +1955,9 @@ function App() {
     const checkKey = coupleId + ":" + user.uid + ":" + todayISO;
     if (memoryPopupCheckRef.current === checkKey) return;
     memoryPopupCheckRef.current = checkKey;
-    // New key resets the old mixed-memory schedule, so this refined version can
-    // show a keepsake letter rather than waiting for the previous event popup.
-    const storageKey = "loveJournalKeepsakeLetterSurprise:v2:" + coupleId + ":" + user.uid;
+    // New key lets this version show once immediately, so the on-demand photo
+    // control can be used without waiting for the previous popup schedule.
+    const storageKey = "loveJournalKeepsakeLetterSurprise:v3:" + coupleId + ":" + user.uid;
     let saved = {};
     try { saved = JSON.parse(window.localStorage.getItem(storageKey) || "{}") || {}; } catch (e) {}
     const currentTime = Date.now();
@@ -2483,7 +2511,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v29</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v30</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
@@ -2493,7 +2521,7 @@ function App() {
         </div>
       </div>
 
-      {memoryPopup && <MemorySurprise memory={memoryPopup} onClose={closeMemoryPopup} />}
+      {memoryPopup && <MemorySurprise memory={memoryPopup} coupleId={coupleId} onClose={closeMemoryPopup} />}
       {openLetter && (() => {
         const l = data.letters.find((x) => x.id === openLetter);
         if (!l) return null;
