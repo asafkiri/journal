@@ -367,7 +367,7 @@ function translateAuthError(e) {
   return "שגיאה: " + ((e && e.message) || c || "לא ידוע");
 }
 
-const CHAT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const CHAT_TTL_MS = 12 * 60 * 60 * 1000;
 const CHAT_MAX_MESSAGES = 200;
 // The marker is kept inside `text` so a partner who still has v26 open cannot
 // erase the photo reference: v26 preserves text even though it strips new fields.
@@ -1554,11 +1554,11 @@ function RollingChatCard({ messages, names, me, meColor, partnerColor, coupleId,
     <Card className="fade-up p-3" style={{ animationDelay: ".08s" }}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5"><span style={{ fontSize: 16 }}>💬</span><span className="font-extrabold" style={{ fontSize: 14, color: C.ink }}>הצ׳אט שלנו</span></div>
-        <span className="rounded-full px-2.5 py-1 font-bold" style={{ fontSize: 11, color: "#7C3AED", background: "#F3E8FF" }}>נשמר 7 ימים</span>
+        <span className="rounded-full px-2.5 py-1 font-bold" style={{ fontSize: 11, color: "#7C3AED", background: "#F3E8FF" }}>נשמר 12 שעות</span>
       </div>
       <div ref={boxRef} className="rounded-3xl p-2 mb-3" style={{ maxHeight: 265, overflowY: "auto", background: "linear-gradient(180deg,#FFF7FB,#F7F1FF)", border: `1px solid ${C.line}` }}>
         {!items.length && (
-          <div className="text-center py-7" style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>אין עדיין הודעות השבוע.<br />שלחו משהו קטן ומתוק 💗</div>
+          <div className="text-center py-7" style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>אין עדיין הודעות ב־12 השעות האחרונות.<br />שלחו משהו קטן ומתוק 💗</div>
         )}
         <div className="flex flex-col gap-2">
           {items.map((m) => {
@@ -1829,7 +1829,7 @@ function App() {
     setData((d) => ({ ...d, reminders: d.reminders.map((r) => due.find((x) => x.id === r.id) ? { ...r, fired: true } : r) }));
   }, [now]);
 
-  // Keep rolling chat history to the last 7 days / 200 messages. Photo docs are
+  // Keep rolling chat history to the last 12 hours / 200 messages. Photo docs are
   // deleted in the same transaction that removes their message/reference. If the
   // transaction fails offline, nothing is partially removed and the next minute retries.
   useEffect(() => {
