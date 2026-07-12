@@ -54,7 +54,7 @@
 
 <!-- The app (JSX, transpiled in the browser by Babel) -->
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo, useRef } = React;
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 /* ============================ icons (inline SVG) ============================ */
 function Svg({ style, children }) {
@@ -371,7 +371,7 @@ const CHAT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CHAT_MAX_MESSAGES = 200;
 // The marker is kept inside `text` so a partner who still has v26 open cannot
 // erase the photo reference: v26 preserves text even though it strips new fields.
-// v27 hides the marker and renders the real "פתח תמונה" control instead.
+// v27+ hides the marker and renders the real "פתח תמונה" control instead.
 const CHAT_PHOTO_MARKER = "\u2063📷 תמונה בצ׳אט";
 const chatPhotoDocId = (messageId) => "chat-" + messageId;
 function visibleChatText(message) {
@@ -490,6 +490,112 @@ async function deletePhotoDoc(coupleId, letterId) {
 function sealedOpened(l) {
   if (!l || !l.openAt) return true; // not a sealed letter
   return l.opened === undefined ? true : !!l.opened;
+}
+
+/* A small, read-only memory surprise. Its cadence is kept per person on the
+   current device, so showing/closing it never writes extra fields to Firebase. */
+const MEMORY_MIN_AGE_MS = 2 * 24 * 60 * 60 * 1000;
+const MEMORY_GAP_MIN_DAYS = 3;
+const MEMORY_GAP_MAX_DAYS = 5;
+function memoryHash(value) {
+  const s = String(value || "");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function questionForISO(dateISO) {
+  const dayNum = Math.floor(new Date(dateISO + "T00:00:00").getTime() / 864e5);
+  return DAILY_QUESTIONS[((dayNum % DAILY_QUESTIONS.length) + DAILY_QUESTIONS.length) % DAILY_QUESTIONS.length];
+}
+function memoryDateLabel(value) {
+  const d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" });
+}
+function buildMemoryCandidates(data, names, todayISO, nowMs = Date.now()) {
+  if (!data) return [];
+  const items = [];
+  const cutoff = nowMs - MEMORY_MIN_AGE_MS;
+
+  // A daily answer is private until BOTH partners have answered. Keep that same
+  // rule here, then bring the pair of answers back together as one memory.
+  Object.entries(data.dailyAnswers || {}).forEach(([dateISO, answers]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !answers || typeof answers !== "object") return;
+    const dateMs = new Date(dateISO + "T23:59:59").getTime();
+    const a = typeof answers.a === "string" ? answers.a.trim() : "";
+    const b = typeof answers.b === "string" ? answers.b.trim() : "";
+    if (!a || !b || isNaN(dateMs) || dateMs > cutoff) return;
+    items.push({
+      id: "answer:" + dateISO,
+      kind: "answer",
+      icon: "💌",
+      label: "שאלה שענינו עליה יחד",
+      title: questionForISO(dateISO),
+      answers: [{ from: "a", text: a }, { from: "b", text: b }],
+      dateLabel: memoryDateLabel(dateISO + "T12:00:00"),
+    });
+  });
+
+  (data.letters || []).forEach((letter) => {
+    const createdAt = Number(letter && letter.createdAt) || 0;
+    const stillLocked = letter && letter.openAt && Number(letter.openAt) > nowMs;
+    if (!letter || !letter.keepsake || stillLocked || !sealedOpened(letter) || typeof letter.text !== "string" || !letter.text.trim() || !createdAt || createdAt > cutoff) return;
+    items.push({
+      id: "letter:" + (letter.id || createdAt),
+      kind: "letter",
+      icon: "💗",
+      label: "מכתב ששמרנו",
+      title: names && names[letter.from] ? "מכתב מ" + names[letter.from] : "מכתב מהיומן שלנו",
+      body: letter.text.trim(),
+      dateLabel: memoryDateLabel(createdAt),
+    });
+  });
+
+  (data.dreams || []).forEach((dream, index) => {
+    if (!dream || typeof dream.text !== "string" || !dream.text.trim()) return;
+    items.push({
+      id: "dream:" + (dream.id || index),
+      kind: "dream",
+      icon: dream.done ? "✨" : "☁️",
+      label: dream.done ? "חלום שהגשמנו" : "חלום שעוד מחכה לנו",
+      title: dream.done ? "עשינו את זה יחד" : "עוד נגיע לשם יחד",
+      body: dream.text.trim(),
+      dateLabel: "מרשימת החלומות שלנו",
+    });
+  });
+
+  (data.events || []).forEach((event, index) => {
+    if (!event || typeof event.title !== "string" || !event.title.trim() || !event.date) return;
+    // Personal/work appointments are useful in the calendar, but do not make a
+    // very romantic surprise. Only past couple/fun events become memories.
+    if (event.cat !== "love" && event.cat !== "fun") return;
+    const eventMs = new Date(event.date + "T23:59:59").getTime();
+    if (isNaN(eventMs) || eventMs > cutoff || event.date >= todayISO) return;
+    items.push({
+      id: "event:" + (event.id || index),
+      kind: "event",
+      icon: event.cat === "love" ? "❤️" : "🎉",
+      label: "רגע שהיה לנו יחד",
+      title: event.title.trim(),
+      body: event.time ? "בשעה " + event.time : "",
+      dateLabel: memoryDateLabel(event.date + "T12:00:00"),
+    });
+  });
+  return items;
+}
+function chooseMemoryCandidate(candidates, seed, lastId) {
+  const all = Array.isArray(candidates) ? candidates : [];
+  if (!all.length) return null;
+  const withoutLast = all.filter((item) => item.id !== lastId);
+  const pool = withoutLast.length ? withoutLast : all;
+  // Pick a type first so a long history of daily answers does not drown out a
+  // meaningful letter, dream or event; then pick one item inside that type.
+  const groups = {};
+  pool.forEach((item) => { (groups[item.kind] || (groups[item.kind] = [])).push(item); });
+  const kinds = Object.keys(groups).sort();
+  const kind = kinds[memoryHash(seed + ":kind") % kinds.length];
+  const group = groups[kind];
+  return group[memoryHash(seed + ":item") % group.length];
 }
 
 /* ============================ seed + normalize ============================ */
@@ -1350,6 +1456,51 @@ function OnThisDayCard({ items, names }) {
   );
 }
 
+function MemorySurprise({ memory, names, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  if (!memory) return null;
+  return (
+    <div className="fixed inset-0 flex items-center justify-center p-4 !mt-0" dir="rtl" role="dialog" aria-modal="true" aria-label="רגע קטן מהיומן שלנו"
+      style={{ zIndex: 70, marginTop: 0, background: "rgba(45,25,38,.36)", backdropFilter: "blur(5px)", fontFamily: BODY }}>
+      <div className="memory-pop relative w-full overflow-y-auto rounded-3xl"
+        style={{ maxWidth: 390, maxHeight: "88vh", background: "linear-gradient(145deg,#FFF9FC 0%,#FFF 48%,#F6F1FF 100%)", border: "1px solid rgba(236,72,153,.22)", boxShadow: "0 30px 80px -22px rgba(102,36,78,.65)" }}>
+        <div aria-hidden="true" style={{ position: "absolute", top: -55, right: -45, width: 155, height: 155, borderRadius: 999, background: "rgba(244,114,182,.16)", filter: "blur(3px)" }} />
+        <div aria-hidden="true" style={{ position: "absolute", bottom: -70, left: -50, width: 175, height: 175, borderRadius: 999, background: "rgba(168,85,247,.13)", filter: "blur(3px)" }} />
+        <button autoFocus onClick={onClose} aria-label="סגירת הזיכרון" className="absolute grid place-items-center rounded-full transition active:scale-95"
+          style={{ top: 14, left: 14, zIndex: 2, width: 38, height: 38, color: "#8F7F89", background: "rgba(255,255,255,.88)", border: `1px solid ${C.line}`, boxShadow: "0 7px 18px -10px rgba(80,30,55,.45)" }}>
+          <X style={{ width: 18, height: 18 }} />
+        </button>
+
+        <div className="relative p-5 pt-6 text-center">
+          <div className="memory-glow grid place-items-center mx-auto rounded-full" style={{ width: 68, height: 68, fontSize: 31, background: "linear-gradient(145deg,#FFE7F2,#EEE6FF)", border: "4px solid rgba(255,255,255,.9)", boxShadow: "0 14px 28px -14px rgba(192,70,132,.6)" }}>{memory.icon}</div>
+          <div style={{ fontFamily: SCRIPT, fontSize: 26, color: C.ink, marginTop: 10, lineHeight: 1.15 }}>רגע קטן מהיומן שלנו</div>
+          <div className="inline-flex items-center rounded-full px-3 py-1 mt-2 font-extrabold" style={{ fontSize: 11.5, color: "#A23B78", background: "#FCEAF3", border: "1px solid #F7D3E5" }}>{memory.label}</div>
+
+          <div className="rounded-3xl p-4 mt-4 text-right" style={{ position: "relative", background: "rgba(255,255,255,.82)", border: `1px solid ${C.line}`, boxShadow: "0 14px 30px -22px rgba(112,45,82,.42)" }}>
+            {memory.title && <div className="font-extrabold" style={{ fontSize: 17, color: C.ink, lineHeight: 1.45, textAlign: "center", marginBottom: memory.body || memory.answers ? 11 : 0 }}>{memory.title}</div>}
+            {memory.body && <div style={{ fontSize: 15, color: C.ink, lineHeight: 1.65, whiteSpace: "pre-wrap", textAlign: "right" }}>{memory.body}</div>}
+            {memory.answers && <div className="space-y-2">
+              {memory.answers.map((answer) => (
+                <div key={answer.from} className="rounded-2xl px-3 py-2.5" style={{ background: answer.from === "b" ? "#FFF4F9" : "#F4F8FF", border: `1px solid ${answer.from === "b" ? "#F7D7E7" : "#DCE8FA"}` }}>
+                  <div className="font-extrabold" style={{ fontSize: 11, color: answer.from === "b" ? "#EC4899" : "#3B82F6", marginBottom: 3 }}>{(names && names[answer.from]) || "אנחנו"}</div>
+                  <div style={{ fontSize: 14, color: C.ink, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{answer.text}</div>
+                </div>
+              ))}
+            </div>}
+          </div>
+
+          {memory.dateLabel && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 12 }}>{memory.dateLabel}</div>}
+          <div style={{ fontFamily: SCRIPT, fontSize: 16, color: "#C56A92", marginTop: 6 }}>איזה כיף שיש לנו את הרגע הזה ❤️</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChatPhotoViewer({ message, names, coupleId, onClose }) {
   const [photoData, setPhotoData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1600,6 +1751,7 @@ function App() {
   const seenLettersRef = useRef(null);
   const localLettersRef = useRef(new Set());
   const chatCleanupBusyRef = useRef(false);
+  const memoryPopupCheckRef = useRef("");
   dataRef.current = data;
 
 
@@ -1614,6 +1766,8 @@ function App() {
   const [thinkSent, setThinkSent] = useState(false);
   const [msgTxt, setMsgTxt] = useState("");
   const [msgSent, setMsgSent] = useState(false);
+  const [memoryPopup, setMemoryPopup] = useState(null);
+  const closeMemoryPopup = useCallback(() => setMemoryPopup(null), []);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
   const td = new Date();
@@ -1830,6 +1984,33 @@ function App() {
       .sort((a, b) => b.createdAt - a.createdAt).slice(0, 4)
       .map((l) => { const d = new Date(l.createdAt); const months = (t.getFullYear() - d.getFullYear()) * 12 + (t.getMonth() - d.getMonth()); let ago; if (months >= 12) { const y = Math.floor(months / 12); ago = y === 1 ? "לפני שנה" : "לפני " + y + " שנים"; } else { ago = months === 1 ? "לפני חודש" : "לפני " + months + " חודשים"; } return { text: l.text, from: l.from, ago }; });
   }, [data, todayISO]);
+  const memoryCandidates = useMemo(() => buildMemoryCandidates(data, (data && data.names) || {}, todayISO, Date.now()), [data, todayISO]);
+
+  // Keep the surprise personal: each partner sees it on their own 3–5 day rhythm.
+  // Recording only the next display time + last item in localStorage avoids any
+  // Firestore growth and avoids adding shared-state save races.
+  useEffect(() => {
+    setMemoryPopup(null);
+    memoryPopupCheckRef.current = "";
+  }, [coupleId, user && user.uid]);
+  useEffect(() => {
+    if (!data || !coupleId || !user || !memoryCandidates.length || memoryPopup) return;
+    const checkKey = coupleId + ":" + user.uid + ":" + todayISO;
+    if (memoryPopupCheckRef.current === checkKey) return;
+    memoryPopupCheckRef.current = checkKey;
+    const storageKey = "loveJournalMemorySurprise:" + coupleId + ":" + user.uid;
+    let saved = {};
+    try { saved = JSON.parse(window.localStorage.getItem(storageKey) || "{}") || {}; } catch (e) {}
+    const currentTime = Date.now();
+    if ((Number(saved.nextAt) || 0) > currentTime) return;
+    const seed = coupleId + ":" + user.uid + ":" + todayISO;
+    const chosen = chooseMemoryCandidate(memoryCandidates, seed, saved.lastId || "");
+    if (!chosen) return;
+    const gapRange = MEMORY_GAP_MAX_DAYS - MEMORY_GAP_MIN_DAYS + 1;
+    const gapDays = MEMORY_GAP_MIN_DAYS + (memoryHash(seed + ":gap:" + chosen.id) % gapRange);
+    try { window.localStorage.setItem(storageKey, JSON.stringify({ lastId: chosen.id, nextAt: currentTime + gapDays * 864e5 })); } catch (e) {}
+    setMemoryPopup(chosen);
+  }, [data, coupleId, user && user.uid, todayISO, memoryCandidates, memoryPopup]);
 
   /* auth handlers */
   async function doSignIn(email, password) {
@@ -2091,12 +2272,16 @@ function App() {
         @keyframes pulseSoft { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         @keyframes floaty { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-6px) rotate(8deg); } }
         @keyframes slideDown { from { opacity:0; transform: translateY(-16px);} to {opacity:1; transform:none;} }
+        @keyframes memoryPop { from { opacity:0; transform:translateY(18px) scale(.96); } to { opacity:1; transform:none; } }
+        @keyframes memoryGlow { 0%,100% { transform:scale(1) rotate(-2deg); } 50% { transform:scale(1.045) rotate(2deg); } }
         .fade-up { animation: fadeUp .55s cubic-bezier(.2,.7,.2,1) both; }
         .pulse-soft { animation: pulseSoft 2.4s ease-in-out infinite; }
         .floaty { animation: floaty 4s ease-in-out infinite; }
         .slide-down { animation: slideDown .35s ease both; }
+        .memory-pop { animation: memoryPop .48s cubic-bezier(.2,.8,.2,1) both; }
+        .memory-glow { animation: memoryGlow 3.2s ease-in-out infinite; }
         *::-webkit-scrollbar { width: 0; height: 0; }
-        @media (prefers-reduced-motion: reduce) { .fade-up,.pulse-soft,.floaty,.slide-down { animation: none !important; } }
+        @media (prefers-reduced-motion: reduce) { .fade-up,.pulse-soft,.floaty,.slide-down,.memory-pop,.memory-glow { animation: none !important; } }
       `}</style>
 
       <div style={{ position: "fixed", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
@@ -2367,7 +2552,7 @@ function App() {
         )}
 
         <div className="text-center pt-1" style={{ fontFamily: SCRIPT, fontSize: 15, color: "#C58AA0" }}>נוצר באהבה • {coupleTitle} ❤️</div>
-        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v27</div>
+        <div className="text-center" style={{ fontSize: 10, color: "#D8B9C6", marginTop: 2 }}>v28</div>
 
         <div className="flex flex-col items-center gap-1.5 pt-2">
           {user && user.email && <span style={{ fontSize: 11, color: C.muted, direction: "ltr" }}>{user.email}</span>}
@@ -2377,6 +2562,7 @@ function App() {
         </div>
       </div>
 
+      {memoryPopup && <MemorySurprise memory={memoryPopup} names={N} onClose={closeMemoryPopup} />}
       {openLetter && (() => {
         const l = data.letters.find((x) => x.id === openLetter);
         if (!l) return null;
